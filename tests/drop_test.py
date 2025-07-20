@@ -15,8 +15,8 @@ from engine.collision import resolve_collision
 from engine.renderer  import Renderer
 
 # create two circles
-b1 = RigidBody(position=[0, 4], mass=1, radius=0.5)
-b2 = RigidBody(position=[0, 0], mass=0, radius=1)  # static ground
+b1 = RigidBody(position=[0, 4,3], mass=1, radius=0.5)
+b2 = RigidBody(position=[0, 0,0], mass=0, radius=1)  # static ground
 
 solver   = XPBDSolver([b1, b2], substeps=5, iters=5)
 renderer = Renderer()

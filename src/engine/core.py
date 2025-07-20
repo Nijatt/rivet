@@ -2,7 +2,7 @@
 import numpy as np
 
 class XPBDSolver:
-    def __init__(self, bodies, gravity=np.array([0.0, -9.81]), substeps=4, iters=8):
+    def __init__(self, bodies, gravity=np.array([0.0, -9.81,0.0]), substeps=4, iters=8):
         self.bodies, self.gravity = bodies, gravity
         self.substeps, self.iters = substeps, iters
 

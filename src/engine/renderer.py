@@ -12,7 +12,8 @@ class Renderer:
         self.screen.fill((30, 30, 30))
         for b in bodies:
             # now np is defined
-            x, y = map(int, b.pos * 50 + np.array([400, 300]))
+            # We have to switch to the 3D instead of 2d
+            x, y = map(int, np.array([b.pos[0],b.pos[1]]) * 50 + np.array([400, 300]))
             pygame.draw.circle(self.screen, (200, 200, 20), (x, y), int(b.radius * 50))
         pygame.display.flip()
         self.clock.tick(60)
