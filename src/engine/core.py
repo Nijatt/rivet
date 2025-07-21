@@ -2,7 +2,7 @@
 import numpy as np
 
 class XPBDSolver:
-    def __init__(self, bodies, gravity=np.array([0.0, -9.81]), substeps=4, iters=8):
+    def __init__(self, bodies, gravity=np.array([0.0, -9.81,0.0]), substeps=4, iters=8):
         self.bodies, self.gravity = bodies, gravity
         self.substeps, self.iters = substeps, iters
 
@@ -13,7 +13,7 @@ class XPBDSolver:
             for b in self.bodies:
                 if b.inv_mass == 0: continue
                 b.vel += self.gravity * h
-                b.pred_pos = b.pos + b.vel * h
+                b.pred_transform.position = b.transform.position + b.vel * h
 
             # 2) solve constraints iteratively
             for _ in range(self.iters):
@@ -24,5 +24,5 @@ class XPBDSolver:
 
             # 3) update velocities & positions
             for b in self.bodies:
-                b.vel = (b.pred_pos - b.pos) / h
-                b.pos = b.pred_pos
+                b.vel = (b.pred_transform.position - b.transform.position) / h
+                b.transform.position = b.pred_transform.position

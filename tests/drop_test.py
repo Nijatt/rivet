@@ -14,9 +14,18 @@ from engine.core      import XPBDSolver
 from engine.collision import resolve_collision
 from engine.renderer  import Renderer
 
+
+from engine.transform import Transform
+from engine.body import RigidBody
+
 # create two circles
-b1 = RigidBody(position=[0, 4], mass=1, radius=0.5)
-b2 = RigidBody(position=[0, 0], mass=0, radius=1)  # static ground
+t1 = Transform(position=(0.0, 4.0, 3.0))
+t2 = Transform(position=(0.0, 0.0, 0.0))
+
+b1 = RigidBody(t1, mass=1.0, radius=0.5)
+b2 = RigidBody(t2, mass=0.0, radius=1.0)   # static
+
+
 
 solver   = XPBDSolver([b1, b2], substeps=5, iters=5)
 renderer = Renderer()
@@ -28,5 +37,5 @@ while True:
             sys.exit()
 
     solver.step(1/60)
-    resolve_collision(b1, b2)
+    # resolve_collision(b1, b2)
     renderer.render([b1, b2])
