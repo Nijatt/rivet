@@ -24,8 +24,10 @@ bodies = [
     RigidBody(Transform((0.0, 0.0, 8.0)), mass=0.0, radius=0.5),
 ]
 
-AXIS_LEN = 5.0         
 
+
+#Draw axis 
+AXIS_LEN = 100.0         
 axis_lines = [
     #             start-point           end-point              RGB-color (0-1)
     ( (0, 0, 0),  ( AXIS_LEN, 0, 0),    (1.0, 0.0, 0.0) ),   # +X red
@@ -44,9 +46,7 @@ solver = XPBDSolver(bodies,
                     substeps=4,
                     iters=4)
 
-# ----------------------------
-# Simple collision helpers
-# ----------------------------
+#TODO: move it to the collision pipeline.
 def collide_sphere_plane(b: RigidBody, plane_y=0.0, restitution=0.2):
     """ Project sphere out of the plane y=plane_y and apply velocity response. """
     # After solver.step we use committed positions
@@ -57,6 +57,7 @@ def collide_sphere_plane(b: RigidBody, plane_y=0.0, restitution=0.2):
         if b.vel[1] < 0:
             b.vel[1] = -b.vel[1] * restitution
 
+#TODO: move it to the collision pipeline.
 def collide_sphere_sphere(a: RigidBody, b: RigidBody, restitution=0.2):
     if a.inv_mass == 0 and b.inv_mass == 0:
         return
@@ -84,9 +85,7 @@ def collide_sphere_sphere(a: RigidBody, b: RigidBody, restitution=0.2):
         a.vel += -imp * n * a.inv_mass
         b.vel +=  imp * n * b.inv_mass
 
-# ----------------------------
-# Rendering
-# ----------------------------
+#Rendering
 pygame.init()
 renderer = OpenGLRenderer()
 clock = pygame.time.Clock()
@@ -112,8 +111,10 @@ while running:
         for j in range(i+1, len(bodies)):
             collide_sphere_sphere(bodies[i], bodies[j])
 
+    #Move camera
     keys = pygame.key.get_pressed()
     renderer.camera.handle_input(keys, dt)
+
     # Render
     renderer.render(bodies,axis_lines)
     clock.tick(60)
