@@ -24,6 +24,18 @@ bodies = [
     RigidBody(Transform((0.0, 0.0, 8.0)), mass=0.0, radius=0.5),
 ]
 
+AXIS_LEN = 5.0         
+
+axis_lines = [
+    #             start-point           end-point              RGB-color (0-1)
+    ( (0, 0, 0),  ( AXIS_LEN, 0, 0),    (1.0, 0.0, 0.0) ),   # +X red
+    ( (0, 0, 0),  (-AXIS_LEN, 0, 0),    (0.6, 0.2, 0.2) ),   # -X darker red
+    ( (0, 0, 0),  (0,  AXIS_LEN, 0),    (0.0, 1.0, 0.0) ),   # +Y green
+    ( (0, 0, 0),  (0, -AXIS_LEN, 0),    (0.2, 0.6, 0.2) ),   # -Y darker green
+    ( (0, 0, 0),  (0, 0,  AXIS_LEN),    (0.2, 0.5, 1.0) ),   # +Z blue
+    ( (0, 0, 0),  (0, 0, -AXIS_LEN),    (0.1, 0.3, 0.7) )    # -Z darker blue
+]
+
 # ----------------------------
 # XPBD Solver
 # ----------------------------
@@ -100,8 +112,13 @@ while running:
         for j in range(i+1, len(bodies)):
             collide_sphere_sphere(bodies[i], bodies[j])
 
+    keys = pygame.key.get_pressed()
+    # renderer.camera.handle_input(keys, dt)
+    print(renderer.camera)
     # Render
-    renderer.render(bodies)
+    renderer.render(bodies,axis_lines)
     clock.tick(60)
 
 pygame.quit()
+
+

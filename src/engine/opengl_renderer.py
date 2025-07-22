@@ -3,26 +3,34 @@ from pygame.locals import DOUBLEBUF, OPENGL
 from OpenGL import GL
 import numpy as np, math
 
-# ---------- Shaders ----------
-VERT_SRC = """
+# ─────────────────────────── Shaders ────────────────────────────
+SPHERE_VS = """
 #version 330 core
 layout(location=0) in vec3 in_pos;
-uniform mat4 u_model;
-uniform mat4 u_view;
-uniform mat4 u_proj;
-void main(){
-    gl_Position = u_proj * u_view * u_model * vec4(in_pos, 1.0);
-}
+uniform mat4 u_model, u_view, u_proj;
+void main(){ gl_Position = u_proj * u_view * u_model * vec4(in_pos,1.0); }
 """
-FRAG_SRC = """
+SPHERE_FS = """
 #version 330 core
 uniform vec3 u_color;
 out vec4 fragColor;
-void main(){
-    fragColor = vec4(u_color, 1.0);
-}
+void main(){ fragColor = vec4(u_color,1.0); }
 """
 
+LINE_VS = """
+#version 330 core
+layout(location=0) in vec3 in_pos;
+uniform mat4 u_view, u_proj;
+void main(){ gl_Position = u_proj * u_view * vec4(in_pos,1.0); }
+"""
+LINE_FS = """
+#version 330 core
+uniform vec3 u_lin_col;
+out vec4 fragColor;
+void main(){ fragColor = vec4(u_lin_col,1.0); }
+"""
+
+# ───────────────────── OpenGL helpers ───────────────────────────
 def _compile(src, st):
     sid = GL.glCreateShader(st)
     GL.glShaderSource(sid, src)
@@ -30,7 +38,6 @@ def _compile(src, st):
     if GL.glGetShaderiv(sid, GL.GL_COMPILE_STATUS) != GL.GL_TRUE:
         raise RuntimeError(GL.glGetShaderInfoLog(sid).decode())
     return sid
-
 def _link(vs, fs):
     pid = GL.glCreateProgram()
     GL.glAttachShader(pid, vs); GL.glAttachShader(pid, fs)
@@ -40,6 +47,7 @@ def _link(vs, fs):
     GL.glDeleteShader(vs); GL.glDeleteShader(fs)
     return pid
 
+# ───────────────────────── Sphere mesh ──────────────────────────
 def make_uv_sphere(stacks=32, slices=48):
     verts=[]; idx=[]
     for i in range(stacks+1):
@@ -48,8 +56,7 @@ def make_uv_sphere(stacks=32, slices=48):
         for j in range(slices+1):
             u=j/slices; ph=u*2*math.pi
             sp,cp=math.sin(ph),math.cos(ph)
-            x=st*cp; y=ct; z=st*sp
-            verts.append((x,y,z))
+            verts.append((st*cp, ct, st*sp))
     stride=slices+1
     for i in range(stacks):
         for j in range(slices):
@@ -57,109 +64,103 @@ def make_uv_sphere(stacks=32, slices=48):
             idx += [a,b,a+1, b,b+1,a+1]
     return np.array(verts,np.float32), np.array(idx,np.uint32)
 
-def _norm(v):
-    n=np.linalg.norm(v)
-    return v if n<1e-9 else v/n
-
+# ───────────────────────── Camera ───────────────────────────────
+def _norm(v): n=np.linalg.norm(v); return v if n<1e-9 else v/n
 class Camera:
-    def __init__(self, position=(0,2,18), target=(0,1,0), up=(0,1,0),
-                 fov_deg=60, z_near=0.1, z_far=200.0):
-        self.position=np.array(position,dtype=np.float32)
-        self.target  =np.array(target,dtype=np.float32)
-        self.up      =np.array(up,dtype=np.float32)
-        self.fov_deg=fov_deg; self.z_near=z_near; self.z_far=z_far
+    def __init__(self,pos=(0,2,18),tgt=(0,1,0),up=(0,1,0),fov=60,zn=0.1,zf=200):
+        self.pos=np.array(pos,float); self.tgt=np.array(tgt,float); self.up=np.array(up,float)
+        self.fov=fov; self.zn=zn; self.zf=zf
+    def view(self):
+        f=_norm(self.tgt-self.pos); s=_norm(np.cross(f,self.up)); u=np.cross(s,f)
+        V=np.eye(4,dtype=np.float32); V[0,:3]=s; V[1,:3]=u; V[2,:3]=-f
+        V[0,3]=-np.dot(s,self.pos); V[1,3]=-np.dot(u,self.pos); V[2,3]=np.dot(f,self.pos)
+        return V
+    def proj(self,aspect):
+        f=1/math.tan(math.radians(self.fov)/2); zn,zf=self.zn,self.zf
+        return np.array([[f/aspect,0,0,0],[0,f,0,0],[0,0,(zf+zn)/(zn-zf),(2*zf*zn)/(zn-zf)],
+                         [0,0,-1,0]],dtype=np.float32)
 
-    def view_matrix(self):
-        f = _norm(self.target - self.position)
-        s = _norm(np.cross(f, self.up))
-        u = np.cross(s, f)
-        # Build standard row-major view: rows are (s, u, -f), translation last column
-        view = np.eye(4, dtype=np.float32)
-        view[0,0:3] = s
-        view[1,0:3] = u
-        view[2,0:3] = -f
-        # translation components:
-        view[0,3] = -np.dot(s, self.position)
-        view[1,3] = -np.dot(u, self.position)
-        view[2,3] =  np.dot(f, self.position)
-        return view
-
-    def projection_matrix(self, aspect):
-        f=1.0/math.tan(math.radians(self.fov_deg)/2)
-        zn,zf=self.z_near,self.z_far
-        proj = np.array([
-            [f/aspect,0,0,0],
-            [0,f,0,0],
-            [0,0,(zf+zn)/(zn - zf),(2*zf*zn)/(zn - zf)],
-            [0,0,-1,0]
-        ],dtype=np.float32)
-        return proj
-
+# ───────────────────── OpenGLRenderer class ─────────────────────
 class OpenGLRenderer:
-    def __init__(self, width=960, height=600):
-        pygame.display.set_mode((width,height), DOUBLEBUF|OPENGL)
-        self.width,self.height=width,height
-        vs=_compile(VERT_SRC,GL.GL_VERTEX_SHADER)
-        fs=_compile(FRAG_SRC,GL.GL_FRAGMENT_SHADER)
-        self.program=_link(vs,fs)
+    def __init__(self,w=960,h=600):
+        pygame.display.set_mode((w,h),DOUBLEBUF|OPENGL)
+        self.w,self.h=w,h
 
-        verts,indices=make_uv_sphere()
-        self.index_count=indices.size
+        # sphere program
+        self.sph_prog=_link(_compile(SPHERE_VS,GL.GL_VERTEX_SHADER),
+                            _compile(SPHERE_FS,GL.GL_FRAGMENT_SHADER))
+        self.loc_sph = {name:GL.glGetUniformLocation(self.sph_prog,name)
+                        for name in ("u_model","u_view","u_proj","u_color")}
 
-        self.vao=GL.glGenVertexArrays(1)
-        GL.glBindVertexArray(self.vao)
-        self.vbo=GL.glGenBuffers(1)
-        GL.glBindBuffer(GL.GL_ARRAY_BUFFER,self.vbo)
+        # line program
+        self.lin_prog=_link(_compile(LINE_VS,GL.GL_VERTEX_SHADER),
+                            _compile(LINE_FS,GL.GL_FRAGMENT_SHADER))
+        self.loc_lin = {name:GL.glGetUniformLocation(self.lin_prog,name)
+                        for name in ("u_view","u_proj","u_lin_col")}
+
+        # sphere VAO/VBO/EBO
+        verts,idx=make_uv_sphere(); self.sph_count=idx.size
+        self.sph_vao=GL.glGenVertexArrays(1); GL.glBindVertexArray(self.sph_vao)
+        vbo=GL.glGenBuffers(1); GL.glBindBuffer(GL.GL_ARRAY_BUFFER,vbo)
         GL.glBufferData(GL.GL_ARRAY_BUFFER,verts.nbytes,verts,GL.GL_STATIC_DRAW)
-        self.ebo=GL.glGenBuffers(1)
-        GL.glBindBuffer(GL.GL_ELEMENT_ARRAY_BUFFER,self.ebo)
-        GL.glBufferData(GL.GL_ELEMENT_ARRAY_BUFFER,indices.nbytes,indices,GL.GL_STATIC_DRAW)
-        GL.glEnableVertexAttribArray(0)
-        GL.glVertexAttribPointer(0,3,GL.GL_FLOAT,GL.GL_FALSE,0,None)
+        ebo=GL.glGenBuffers(1); GL.glBindBuffer(GL.GL_ELEMENT_ARRAY_BUFFER,ebo)
+        GL.glBufferData(GL.GL_ELEMENT_ARRAY_BUFFER,idx.nbytes,idx,GL.GL_STATIC_DRAW)
+        GL.glEnableVertexAttribArray(0); GL.glVertexAttribPointer(0,3,GL.GL_FLOAT,False,0,None)
         GL.glBindVertexArray(0)
 
-        self.loc_model=GL.glGetUniformLocation(self.program,"u_model")
-        self.loc_view =GL.glGetUniformLocation(self.program,"u_view")
-        self.loc_proj =GL.glGetUniformLocation(self.program,"u_proj")
-        self.loc_color=GL.glGetUniformLocation(self.program,"u_color")
+        # dynamic line VAO/VBO (allocate once, update per frame)
+        self.lin_vao=GL.glGenVertexArrays(1); self.lin_vbo=GL.glGenBuffers(1)
+        GL.glBindVertexArray(self.lin_vao)
+        GL.glBindBuffer(GL.GL_ARRAY_BUFFER,self.lin_vbo)
+        GL.glBufferData(GL.GL_ARRAY_BUFFER, 4*3*2*1024, None, GL.GL_DYNAMIC_DRAW) # up to 1024 lines
+        GL.glEnableVertexAttribArray(0); GL.glVertexAttribPointer(0,3,GL.GL_FLOAT,False,0,None)
+        GL.glBindVertexArray(0)
 
-        GL.glEnable(GL.GL_DEPTH_TEST)
-        GL.glDisable(GL.GL_CULL_FACE)
-
+        GL.glEnable(GL.GL_DEPTH_TEST); GL.glDisable(GL.GL_CULL_FACE)
         self.camera=Camera()
 
-    def _model_matrix(self, center, radius):
+    # ---------- helpers ----------
+    @staticmethod
+    def _model(center,radius):
         M=np.eye(4,dtype=np.float32)
-        M[0,0]=M[1,1]=M[2,2]=radius
-        M[0,3]=center[0]
-        M[1,3]=center[1]
-        M[2,3]=center[2]
+        M[0,0]=M[1,1]=M[2,2]=radius; M[0,3],M[1,3],M[2,3]=center
         return M
 
-    def render(self, bodies):
-        GL.glViewport(0,0,self.width,self.height)
-        GL.glClearColor(0.05,0.06,0.10,1.0)
-        GL.glClear(GL.GL_COLOR_BUFFER_BIT|GL.GL_DEPTH_BUFFER_BIT)
+    # ---------- public render ----------
+    def render(self, bodies, lines=None):
+        GL.glViewport(0,0,self.w,self.h)
+        GL.glClearColor(0.05,0.06,0.10,1); GL.glClear(GL.GL_COLOR_BUFFER_BIT|GL.GL_DEPTH_BUFFER_BIT)
+        view=self.camera.view(); proj=self.camera.proj(self.w/self.h)
 
-        GL.glUseProgram(self.program)
-
-        view=self.camera.view_matrix()
-        proj=self.camera.projection_matrix(self.width/self.height)
-
-        # Upload with GL_TRUE (transpose) so our row-major matrices become correct column-major for GL
-        GL.glUniformMatrix4fv(self.loc_view, 1, GL.GL_TRUE, view)
-        GL.glUniformMatrix4fv(self.loc_proj, 1, GL.GL_TRUE, proj)
-
-        GL.glBindVertexArray(self.vao)
+        # Draw spheres
+        GL.glUseProgram(self.sph_prog)
+        GL.glUniformMatrix4fv(self.loc_sph["u_view"],1,True,view)
+        GL.glUniformMatrix4fv(self.loc_sph["u_proj"],1,True,proj)
+        GL.glBindVertexArray(self.sph_vao)
         for i,b in enumerate(bodies):
-            c = np.asarray(b.transform.position, dtype=np.float32)
-            r = float(b.radius)
-            model=self._model_matrix(c,r)
-            GL.glUniformMatrix4fv(self.loc_model,1,GL.GL_TRUE,model)
-
-            t=(i*37)%100/100.0
-            GL.glUniform3f(self.loc_color, 0.3+0.7*t, 0.6-0.3*t, 0.4+0.5*(1-t))
-            GL.glDrawElements(GL.GL_TRIANGLES,self.index_count,GL.GL_UNSIGNED_INT,None)
-
+            model=self._model(b.transform.position.astype(np.float32), float(b.radius))
+            GL.glUniformMatrix4fv(self.loc_sph["u_model"],1,True,model)
+            hue=(i*37)%100/100
+            GL.glUniform3f(self.loc_sph["u_color"],0.3+0.6*hue,0.7-0.4*hue,0.5+0.4*(1-hue))
+            GL.glDrawElements(GL.GL_TRIANGLES,self.sph_count,GL.GL_UNSIGNED_INT,None)
         GL.glBindVertexArray(0)
+
+        # Draw lines if provided
+        if lines:
+            # flatten vertices
+            verts=np.array([p for seg in lines for p in (seg[0],seg[1])],dtype=np.float32)
+            GL.glBindBuffer(GL.GL_ARRAY_BUFFER,self.lin_vbo)
+            GL.glBufferSubData(GL.GL_ARRAY_BUFFER,0,verts.nbytes,verts)
+            GL.glUseProgram(self.lin_prog)
+            GL.glUniformMatrix4fv(self.loc_lin["u_view"],1,True,view)
+            GL.glUniformMatrix4fv(self.loc_lin["u_proj"],1,True,proj)
+            GL.glBindVertexArray(self.lin_vao)
+            offset=0
+            for seg in lines:
+                col=np.array(seg[2] if len(seg)==3 else (1,1,1),dtype=np.float32)
+                GL.glUniform3fv(self.loc_lin["u_lin_col"],1,col)
+                GL.glDrawArrays(GL.GL_LINES,offset,2)
+                offset+=2
+            GL.glBindVertexArray(0)
+
         pygame.display.flip()
