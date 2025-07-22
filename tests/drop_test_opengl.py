@@ -18,6 +18,8 @@ bodies = [
     RigidBody(Transform(( 1.5, 7.0, 7.5)), mass=1.0, radius=1.1),
     RigidBody(Transform(( 4.0, 9.5, 9.5)), mass=1.0, radius=0.95),
     RigidBody(Transform(( 0.0,10.5, 8.5)), mass=1.0, radius=0.75),
+    RigidBody(Transform(( 5.0, 8.5, 7.5)), mass=1.0, radius=0.95),
+    RigidBody(Transform(( 4.0,10.5, 15.5)), mass=1.0, radius=0.75),
     # Optional static "ground anchor" sphere (mass=0) just to visualize
     RigidBody(Transform((0.0, 0.0, 8.0)), mass=0.0, radius=0.5),
 ]
