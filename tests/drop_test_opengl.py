@@ -113,8 +113,7 @@ while running:
             collide_sphere_sphere(bodies[i], bodies[j])
 
     keys = pygame.key.get_pressed()
-    # renderer.camera.handle_input(keys, dt)
-    print(renderer.camera)
+    renderer.camera.handle_input(keys, dt)
     # Render
     renderer.render(bodies,axis_lines)
     clock.tick(60)
