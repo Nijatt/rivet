@@ -10,10 +10,10 @@ from engine.core import XPBDSolver
 from engine.opengl_renderer import OpenGLRenderer
 
 # ───────────────────────── Rope construction ─────────────────────────
-ROPE_START   = np.array([1.0, 10.0, .0], dtype=float)   # first sphere centre
+ROPE_START   = np.array([1.0, 10.0, 1.0], dtype=float)   # first sphere centre
 SEG_LEN      = 1.0                                      # spacing along +X
 NUM_SPHERES  = 10                                       # 10 spheres → length 9
-SPHERE_RAD   = 0.4
+SPHERE_RAD   = 0.2
 DYNAMIC_MASS = 1.0                                      # every sphere except anchor
 
 bodies = []
@@ -23,7 +23,7 @@ for i in range(NUM_SPHERES):
     bodies.append(RigidBody(Transform(pos), mass=mass, radius=SPHERE_RAD))
 
 # ───────────────────────── Axis helper lines ─────────────────────────
-AXIS_LEN = 6.0
+AXIS_LEN = 100.0
 axis_lines = [
     ((0,0,0), ( AXIS_LEN,0,0), (1,0,0)),
     ((0,0,0), (-AXIS_LEN,0,0), (0.6,0.2,0.2)),
