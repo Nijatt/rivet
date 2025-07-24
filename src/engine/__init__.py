@@ -12,6 +12,9 @@ from .renderer  import Renderer
 from .transform import Transform
 from .gl_camera import Camera
 from .opengl_renderer import OpenGLRenderer
+from .rod_system import ElasticEdge
+from .rod_system import OrientationElement
+from .rod_system import ElasticRod
 
 
 # Define what 'import *' will bring in
@@ -22,7 +25,9 @@ __all__ = [
     "resolve_collision",
     "Renderer",
     "Transform",
-    "Camera"
-    "OpenGLRenderer"
+    "Camera",
+    "OpenGLRenderer",
+    "ElasticEdge",
+    "ElasticRod"
     "__version__",
 ]

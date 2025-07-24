@@ -6,21 +6,50 @@ sys.path.insert(0, os.path.join(PROJECT_ROOT, "src"))
 
 from engine.transform import Transform
 from engine.body import RigidBody
+from engine.rod_system import ElasticEdge,OrientationElement,ElasticRod
 from engine.core import XPBDSolver
 from engine.opengl_renderer import OpenGLRenderer
 
 # ───────────────────────── Rope construction ─────────────────────────
 ROPE_START   = np.array([1.0, 10.0, 1.0], dtype=float)   # first sphere centre
 SEG_LEN      = 1.0                                      # spacing along +X
-NUM_SPHERES  = 10                                       # 10 spheres → length 9
+NUM_SPHERES  = 5                                       # 10 spheres → length 9
 SPHERE_RAD   = 0.2
 DYNAMIC_MASS = 1.0                                      # every sphere except anchor
+GHOST_DIST_RATIO = 1.0 
+GHOST_MASS_RATIO = 1.0 
 
-bodies = []
+#Generate particles
+particles = []
 for i in range(NUM_SPHERES):
     pos  = ROPE_START + np.array([i * SEG_LEN, 0.0, 0.0])
     mass = 0.0 if i == 0 else DYNAMIC_MASS               # pin first sphere
-    bodies.append(RigidBody(Transform(pos), mass=mass, radius=SPHERE_RAD))
+    particles.append(RigidBody(Transform(pos), mass=mass, radius=SPHERE_RAD))
+
+#Generate edges
+edges = []
+for i in range(NUM_SPHERES - 1):
+    p0 = particles[i].transform.position
+    p1 = particles[i + 1].transform.position
+    rest_len = np.linalg.norm(p1 - p0)
+    edges.append(ElasticEdge(i, i + 1, rest_len,0,0))
+
+#Generate edges
+orientation_elements = []
+for i in range(NUM_SPHERES - 1):
+    #TODO: get frame element
+    # edgeFrame0 = edges[i].get_frame();
+    # edgeFrame1 = edges[i + 1].get_frame();
+    restDarbouxVector = 0 #TODO: Calculate the darboux
+    edges.append(OrientationElement(i, i + 1, restDarbouxVector))
+
+
+#Create rope
+elastic_rod = ElasticRod;
+elastic_rod.particles = particles;
+elastic_rod.edges = edges;
+elastic_rod.orientation_elements = orientation_elements;
+
 
 # ───────────────────────── Axis helper lines ─────────────────────────
 AXIS_LEN = 100.0
@@ -36,15 +65,15 @@ axis_lines = [
 def rope_lines():
     """Return axis_lines + one white segment between every consecutive pair."""
     segs = [ (a.transform.position, b.transform.position, (1,1,1))
-             for a, b in zip(bodies[:-1], bodies[1:]) ]
+             for a, b in zip(particles[:-1], particles[1:]) ]
     return segs + axis_lines
 
 # ───────────────────────── XPBD solver ───────────────────────────────
 solver = XPBDSolver(
-    bodies,
+    particles,
     gravity=np.array([0.0, -9.81, 0.0]),
     substeps=4,
-    iters=4
+    iters=1
 )
 
 # ───────────────────────── Simple collision helpers ─────────────────
@@ -95,18 +124,18 @@ while running:
 
     # physics
     solver.step(dt)
-    for b in bodies:
+    for b in elastic_rod.particles:
         collide_sphere_plane(b, plane_y=0.0)
-    for i in range(len(bodies)):
-        for j in range(i+1, len(bodies)):
-            collide_sphere_sphere(bodies[i], bodies[j])
+    for i in range(len(elastic_rod.particles)):
+        for j in range(i+1, len(elastic_rod.particles)):
+            collide_sphere_sphere(elastic_rod.particles[i], elastic_rod.particles[j])
 
     # camera input
     keys = pygame.key.get_pressed()
     renderer.camera.handle_input(keys, dt)
-
+    
     # draw
-    renderer.render(bodies, rope_lines())
+    renderer.render(elastic_rod.particles, rope_lines())
     clock.tick(60)
 
 pygame.quit()
