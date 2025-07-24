@@ -13,7 +13,7 @@ from engine.opengl_renderer import OpenGLRenderer
 # ───────────────────────── Rope construction ─────────────────────────
 ROPE_START   = np.array([1.0, 10.0, 1.0], dtype=float)   # first sphere centre
 SEG_LEN      = 1.0                                      # spacing along +X
-NUM_SPHERES  = 5                                       # 10 spheres → length 9
+NUM_SPHERES  = 10                                       # 10 spheres → length 9
 SPHERE_RAD   = 0.2
 DYNAMIC_MASS = 1.0                                      # every sphere except anchor
 GHOST_DIST_RATIO = 1.0 
@@ -23,8 +23,11 @@ GHOST_MASS_RATIO = 1.0
 particles = []
 for i in range(NUM_SPHERES):
     pos  = ROPE_START + np.array([i * SEG_LEN, 0.0, 0.0])
-    mass = 0.0 if i == 0 else DYNAMIC_MASS               # pin first sphere
-    particles.append(RigidBody(Transform(pos), mass=mass, radius=SPHERE_RAD))
+    particles.append(RigidBody(Transform(pos), mass=DYNAMIC_MASS, radius=SPHERE_RAD))
+
+#NOTE: lets do stupid check
+particles[0].inv_mass = 0;
+particles[0].mass = 0;
 
 #Generate edges
 edges = []
@@ -41,7 +44,7 @@ for i in range(NUM_SPHERES - 1):
     # edgeFrame0 = edges[i].get_frame();
     # edgeFrame1 = edges[i + 1].get_frame();
     restDarbouxVector = 0 #TODO: Calculate the darboux
-    edges.append(OrientationElement(i, i + 1, restDarbouxVector))
+    orientation_elements.append(OrientationElement(i, i + 1, restDarbouxVector))
 
 
 #Create rope
@@ -70,10 +73,10 @@ def rope_lines():
 
 # ───────────────────────── XPBD solver ───────────────────────────────
 solver = XPBDSolver(
-    particles,
+    elastic_rod,
     gravity=np.array([0.0, -9.81, 0.0]),
-    substeps=4,
-    iters=1
+    substeps=1,
+    iters=2
 )
 
 # ───────────────────────── Simple collision helpers ─────────────────
@@ -117,13 +120,17 @@ clock    = pygame.time.Clock()
 dt       = 1.0 / 60.0
 running  = True
 
+counter=0;
+
 while running:
     for e in pygame.event.get():
         if e.type == QUIT:
             running = False
-
-    # physics
+    # if(counter<100):
+    #     solver.step(dt)
+        
     solver.step(dt)
+    # physics
     for b in elastic_rod.particles:
         collide_sphere_plane(b, plane_y=0.0)
     for i in range(len(elastic_rod.particles)):
@@ -137,5 +144,6 @@ while running:
     # draw
     renderer.render(elastic_rod.particles, rope_lines())
     clock.tick(60)
+    # counter+=1;
 
 pygame.quit()
