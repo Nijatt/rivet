@@ -7,11 +7,11 @@ sys.path.insert(0, os.path.join(PROJECT_ROOT, "src"))
 from engine.transform import Transform
 from engine.body import RigidBody
 from engine.rod_system import ElasticEdge,OrientationElement,ElasticRod
-from engine.core import XPBDSolver
+from engine.core import PBDSolver
 from engine.opengl_renderer import OpenGLRenderer
 
 # ───────────────────────── Rope construction ─────────────────────────
-ROPE_START   = np.array([1.0, 10.0, 1.0], dtype=float)   # first sphere centre
+ROPE_START   = np.array([1.0, 2.0, 1.0], dtype=float)   # first sphere centre
 SEG_LEN      = 1.0                                      # spacing along +X
 NUM_SPHERES  = 10                                       # 10 spheres → length 9
 SPHERE_RAD   = 0.2
@@ -72,10 +72,10 @@ def rope_lines():
     return segs + axis_lines
 
 # ───────────────────────── XPBD solver ───────────────────────────────
-solver = XPBDSolver(
+solver = PBDSolver(
     elastic_rod,
     gravity=np.array([0.0, -9.81, 0.0]),
-    substeps=5,
+    substeps=1,
     iters=1
 )
 
@@ -130,17 +130,11 @@ while running:
     #     solver.step(dt)
         
     solver.step(dt)
-    # physics
-    for b in elastic_rod.particles:
-        collide_sphere_plane(b, plane_y=0.0)
-    for i in range(len(elastic_rod.particles)):
-        for j in range(i+1, len(elastic_rod.particles)):
-            collide_sphere_sphere(elastic_rod.particles[i], elastic_rod.particles[j])
 
     # camera input
     keys = pygame.key.get_pressed()
     renderer.camera.handle_input(keys, dt)
-    
+
     # draw
     renderer.render(elastic_rod.particles, rope_lines())
     clock.tick(60)

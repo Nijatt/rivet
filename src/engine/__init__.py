@@ -7,6 +7,7 @@ __version__ = "0.1.0"
 from .body      import RigidBody
 from .body      import Particle
 from .core      import XPBDSolver
+from .core import PBDSolver
 from .collision import resolve_collision
 from .renderer  import Renderer
 from .transform import Transform
@@ -22,6 +23,7 @@ __all__ = [
     "RigidBody",
     "Particle",
     "XPBDSolver",
+    "PBDSolver",
     "resolve_collision",
     "Renderer",
     "Transform",
