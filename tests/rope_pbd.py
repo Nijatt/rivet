@@ -13,7 +13,7 @@ from engine.opengl_renderer import OpenGLRenderer
 # ───────────────────────── Rope construction ─────────────────────────
 ROPE_START   = np.array([1.0, 2.0, 1.0], dtype=float)   # first sphere centre
 SEG_LEN      = 1.0                                      # spacing along +X
-NUM_SPHERES  = 10                                       # 10 spheres → length 9
+NUM_SPHERES  = 5                                       # 10 spheres → length 9
 SPHERE_RAD   = 0.2
 DYNAMIC_MASS = 1.0                                      # every sphere except anchor
 GHOST_DIST_RATIO = 1.0 
@@ -35,7 +35,7 @@ for i in range(NUM_SPHERES - 1):
     p0 = particles[i].transform.position
     p1 = particles[i + 1].transform.position
     rest_len = np.linalg.norm(p1 - p0)
-    edges.append(ElasticEdge(i, i + 1, rest_len,0,0))
+    edges.append(ElasticEdge(i, i + 1,rest_len ,0,0))
 
 #Generate edges
 orientation_elements = []
@@ -76,7 +76,7 @@ solver = PBDSolver(
     elastic_rod,
     gravity=np.array([0.0, -9.81, 0.0]),
     substeps=1,
-    iters=1
+    iters=10
 )
 
 # ───────────────────────── Simple collision helpers ─────────────────

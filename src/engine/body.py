@@ -3,6 +3,7 @@
 import numpy as np
 from .transform import Transform
 from .quaternion import quat_identity, quat_normalize, quat_mul, quat_from_axis_angle
+from .math import float3
 
 class RigidBody:
     """
@@ -20,10 +21,7 @@ class RigidBody:
         self.transform = transform
 
         # Independent predicted transform (deep copy so prediction is separate)
-        self.pred_transform = Transform(
-            position=np.array(self.transform.position, dtype=float),
-            rotation=np.array(self.transform.rotation, dtype=float)
-        )
+        self.pred_transform = transform
 
         self.vel = np.zeros(3, dtype=float)
         self.mass = mass

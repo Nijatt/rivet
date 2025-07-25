@@ -1,10 +1,11 @@
 # src/engine/core.py
 import numpy as np
+from .math import ensure_float3          #  ← add this
 
 #TODO: gravity must be in z but we have unity consistent y
 class PBDSolver:
     def __init__(self, elastic_rod, gravity=np.array([0.0, -9.81,0.0]), substeps=4, iters=8):
-        self.elastic_rod, self.gravity = elastic_rod, gravity
+        self.elastic_rod, self.gravity = elastic_rod, ensure_float3(gravity)
         self.substeps, self.iters = substeps, iters
     
     #NOTE: we are going to define the whole solver here for the sake of simplicity
@@ -46,6 +47,7 @@ class PBDSolver:
 
                         d   = x1 - x0
                         L   = np.linalg.norm(d)
+
                         if L < 1e-8:
                             continue
 
@@ -76,6 +78,9 @@ class PBDSolver:
                         p0.pred_transform.position = x0
                         p1.pred_transform.position = x1
 
+                        # reverse sweep (only if you want full ‘bidirectional’ in one sub‑iteration)
+                    for ei in range(len(self.elastic_rod.edges) - 1 - (1 - parity), -1, -2):
+                       pass
 
             # 3) update velocities & positions
             for b in self.elastic_rod.particles:
