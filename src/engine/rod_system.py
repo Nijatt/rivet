@@ -20,6 +20,7 @@ class OrientationElement:
 @dataclass
 class ElasticRod:
     particles: list           # list[RigidBody]
+    ghost_particles:list
     edges: list[ElasticEdge] = field(default_factory=list)
     orientation_elements: list[OrientationElement] = field(default_factory=list)
 

@@ -6,6 +6,7 @@ class PBDSolver:
     def __init__(self, elastic_rod, gravity=np.array([0.0, -9.81,0.0]), substeps=4, iters=8):
         self.elastic_rod, self.gravity = elastic_rod, gravity
         self.substeps, self.iters = substeps, iters
+        self.g_norm2 = np.dot(self.gravity, self.gravity) 
     
     #NOTE: we are going to define the whole solver here for the sake of simplicity
     #NOTE: the constraints will be solved here.
@@ -22,8 +23,37 @@ class PBDSolver:
                 b.vel += self.gravity * h
                 b.pred_transform.position = b.transform.position + b.vel * h
 
-                #TODO: use ghost points here. Do  dirty check for the particles.
-                # if ghost particle do particle check here.
+            for e in self.elastic_rod.edges:
+                p0, p1  = self.elastic_rod.particles[e.p0], self.elastic_rod.particles[e.p1]
+                g1 = self.elastic_rod.ghost_particles[e.g1]
+
+                # midpoint velocity at current sub‑step
+                v_m_now  = 0.5 * (p0.vel + p1.vel)
+
+                # midpoint velocity at previous sub‑step (store it on the ghost)
+                v_m_old  = g1.mid_vel_prev if hasattr(g1, 'mid_vel_prev') else v_m_now
+
+                # acceleration of midpoint
+                a_m      = (v_m_now - v_m_old) / dt
+
+                # ratio r  (Eq. r = (a_m·g)/|g|²)
+                r        = np.dot(a_m, self.gravity) / self.g_norm2
+
+                # Δv = (1 – r) Δt g   —— distribute: −1 for ghost, +½ each to end points
+                dv       = (1.0 - r) * dt * self.gravity
+
+                g1.vel       -= dv                                     # v_g  ← v_g − Δv
+                p0.vel  += 0.5 * dv                               # v_{e‑1} += ½ Δv
+                p1.vel  += 0.5 * dv                               # v_e     += ½ Δv
+
+                # TODO: stash current midpoint velocity for next sub‑step
+                # g1.mid_vel_prev = v_m_now
+                g1.pred_transform.position = g1.transform.position + g1.vel * h
+
+
+            for b in self.elastic_rod.particles:
+                b.pred_transform.position = b.transform.position + b.vel * h
+
 
             #NOTE: This segment of the code is an important part where we can test different type of solvers.
             #TODO: in current case test it with the GS. Then eventually move to the other system for better accurasy.
@@ -79,6 +109,10 @@ class PBDSolver:
 
             # 3) update velocities & positions
             for b in self.elastic_rod.particles:
+                b.vel = (b.pred_transform.position - b.transform.position) / h
+                b.transform.position = b.pred_transform.position
+
+            for b in self.elastic_rod.ghost_particles:
                 b.vel = (b.pred_transform.position - b.transform.position) / h
                 b.transform.position = b.pred_transform.position
 

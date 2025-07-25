@@ -25,9 +25,6 @@ for i in range(NUM_SPHERES):
     pos  = ROPE_START + np.array([i * SEG_LEN, 0.0, 0.0])
     particles.append(RigidBody(Transform(pos), mass=DYNAMIC_MASS, radius=SPHERE_RAD))
 
-#NOTE: lets do stupid check
-particles[0].inv_mass = 0;
-particles[0].mass = 0;
 
 #Generate edges
 edges = []
@@ -36,6 +33,56 @@ for i in range(NUM_SPHERES - 1):
     p1 = particles[i + 1].transform.position
     rest_len = np.linalg.norm(p1 - p0)
     edges.append(ElasticEdge(i, i + 1, rest_len,0,0))
+
+ghost_particles = []
+for i in range(len(edges) - 1):
+    e0 = edges[i]
+    e1 = edges[i + 1]
+
+    # Particle indices
+    p0 = particles[e0.p0].transform.position
+    p1 = particles[e0.p1].transform.position
+    p2 = particles[e1.p1].transform.position
+
+    # Tangents
+    t0 = p1 - p0
+    t1 = p2 - p1
+    t0_n = t0 / np.linalg.norm(t0)
+    t1_n = t1 / np.linalg.norm(t1)
+
+    # Change in tangent (not normalized, can be used if needed)
+    dt = t1_n - t0_n
+
+    # Rotation axis (direction of ghost)
+    axis = np.cross(t0_n, t1_n)
+    axis_len = np.linalg.norm(axis)
+    if axis_len < 1e-6:
+        axis = np.array([0.0, 0.0, 0.0])
+    else:
+        axis = axis / axis_len
+
+    # Midpoint of shared edge (between p1 and p2 for placing ghost)
+    edge_center = (p1 + p2) * 0.5
+
+    # Ghost position offset along the axis
+    ghost_offset = axis * SEG_LEN * GHOST_DIST_RATIO
+    ghost_pos = edge_center + ghost_offset
+
+    e0.g1 = i
+    e0.ghost_rest_len = ghost_offset;
+    ghost_rb = RigidBody(
+        Transform(ghost_pos),
+        mass=DYNAMIC_MASS * GHOST_MASS_RATIO,
+        radius=SPHERE_RAD * 0.5
+    )
+    ghost_particles.append(ghost_rb)
+    
+
+#note:fix the static mass here
+
+#NOTE: lets do stupid check
+particles[0].inv_mass = 0;
+particles[0].mass = 0;
 
 #Generate edges
 orientation_elements = []
@@ -50,6 +97,7 @@ for i in range(NUM_SPHERES - 1):
 #Create rope
 elastic_rod = ElasticRod;
 elastic_rod.particles = particles;
+elastic_rod.ghost_particles = ghost_particles;
 elastic_rod.edges = edges;
 elastic_rod.orientation_elements = orientation_elements;
 
@@ -136,7 +184,7 @@ while running:
     renderer.camera.handle_input(keys, dt)
 
     # draw
-    renderer.render(elastic_rod.particles, rope_lines())
+    renderer.render(elastic_rod.particles + elastic_rod.ghost_particles,rope_lines())
     clock.tick(60)
     # counter+=1;
 
