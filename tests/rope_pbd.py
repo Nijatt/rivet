@@ -9,6 +9,7 @@ from engine.body import RigidBody
 from engine.rod_system import ElasticEdge,OrientationElement,ElasticRod
 from engine.core import PBDSolver
 from engine.opengl_renderer import OpenGLRenderer
+import engine.rod_utils
 
 # ───────────────────────── Rope construction ─────────────────────────
 ROPE_START   = np.array([1.0, 2.0, 1.0], dtype=float)   # first sphere centre
@@ -24,6 +25,8 @@ particles = []
 for i in range(NUM_SPHERES):
     pos  = ROPE_START + np.array([i * SEG_LEN, 0.0, 0.0])
     particles.append(RigidBody(Transform(pos), mass=DYNAMIC_MASS, radius=SPHERE_RAD))
+
+T, N, B  = engine.rod_utils.RodUtils.frenet_frames(particles);
 
 
 #Generate edges
@@ -169,23 +172,31 @@ dt       = 1.0 / 60.0
 running  = True
 
 counter=0;
-
+total_frame = 100;
 while running:
     for e in pygame.event.get():
         if e.type == QUIT:
             running = False
-    # if(counter<100):
-    #     solver.step(dt)
+
+    if(counter<total_frame):
+        solver.step(dt)
         
-    solver.step(dt)
+    # solver.step(dt)
+    
+    # 🎯 Recompute frames after the rod is updated
+    T, N, B = engine.rod_utils.RodUtils.frenet_frames(particles)
+
+    # 🎯 Rebuild debug lines
+    frame_lines = engine.rod_utils.RodUtils.frenet_frame_lines(particles, T, N, B)
 
     # camera input
     keys = pygame.key.get_pressed()
     renderer.camera.handle_input(keys, dt)
 
     # draw
-    renderer.render(elastic_rod.particles + elastic_rod.ghost_particles,rope_lines())
+    renderer.render(elastic_rod.particles + elastic_rod.ghost_particles,rope_lines()+frame_lines)
     clock.tick(60)
-    # counter+=1;
+
+    counter+=1;
 
 pygame.quit()

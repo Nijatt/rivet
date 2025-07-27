@@ -16,6 +16,7 @@ from .opengl_renderer import OpenGLRenderer
 from .rod_system import ElasticEdge
 from .rod_system import OrientationElement
 from .rod_system import ElasticRod
+from .rod_utils import RodUtils
 
 
 # Define what 'import *' will bring in
@@ -30,6 +31,7 @@ __all__ = [
     "Camera",
     "OpenGLRenderer",
     "ElasticEdge",
-    "ElasticRod"
+    "ElasticRod",
+    "RodUtils"
     "__version__",
 ]
