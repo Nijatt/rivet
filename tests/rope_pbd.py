@@ -14,10 +14,10 @@ import engine.rod_utils
 # ───────────────────────── Rope construction ─────────────────────────
 ROPE_START   = np.array([1.0, 2.0, 1.0], dtype=float)   # first sphere centre
 SEG_LEN      = 1.0                                      # spacing along +X
-NUM_SPHERES  = 10                                       # 10 spheres → length 9
+NUM_SPHERES  = 4                                       # 10 spheres → length 9
 SPHERE_RAD   = 0.2
 DYNAMIC_MASS = 1.0                                      # every sphere except anchor
-GHOST_DIST_RATIO = 1.0 
+GHOST_DIST_RATIO = 0.5 
 GHOST_MASS_RATIO = 1.0 
 
 #Generate particles
@@ -38,47 +38,27 @@ for i in range(NUM_SPHERES - 1):
     edges.append(ElasticEdge(i, i + 1, rest_len,0,0))
 
 ghost_particles = []
-for i in range(len(edges) - 1):
-    e0 = edges[i]
-    e1 = edges[i + 1]
+for i in range(len(edges)):
+    e = edges[i]
+    p0 = particles[e.p0].transform.position
+    p1 = particles[e.p1].transform.position
 
-    # Particle indices
-    p0 = particles[e0.p0].transform.position
-    p1 = particles[e0.p1].transform.position
-    p2 = particles[e1.p1].transform.position
+    center = (p0 + p1) * 0.5
+    n = N[i]  # safe now — has normal for every edge
 
-    # Tangents
-    t0 = p1 - p0
-    t1 = p2 - p1
-    t0_n = t0 / np.linalg.norm(t0)
-    t1_n = t1 / np.linalg.norm(t1)
+    ghost_offset = n * SEG_LEN * GHOST_DIST_RATIO
+    ghost_pos = center + ghost_offset
 
-    # Change in tangent (not normalized, can be used if needed)
-    dt = t1_n - t0_n
+    e.g1 = i
+    e.ghost_rest_len = ghost_offset
 
-    # Rotation axis (direction of ghost)
-    axis = np.cross(t0_n, t1_n)
-    axis_len = np.linalg.norm(axis)
-    if axis_len < 1e-6:
-        axis = np.array([0.0, 0.0, 0.0])
-    else:
-        axis = axis / axis_len
-
-    # Midpoint of shared edge (between p1 and p2 for placing ghost)
-    edge_center = (p1 + p2) * 0.5
-
-    # Ghost position offset along the axis
-    ghost_offset = axis * SEG_LEN * GHOST_DIST_RATIO
-    ghost_pos = edge_center + ghost_offset
-
-    e0.g1 = i
-    e0.ghost_rest_len = ghost_offset;
     ghost_rb = RigidBody(
         Transform(ghost_pos),
         mass=DYNAMIC_MASS * GHOST_MASS_RATIO,
         radius=SPHERE_RAD * 0.5
     )
     ghost_particles.append(ghost_rb)
+
     
 
 #note:fix the static mass here
@@ -172,7 +152,7 @@ dt       = 1.0 / 60.0
 running  = True
 
 counter=0;
-total_frame = 100;
+total_frame = 100000;
 while running:
     for e in pygame.event.get():
         if e.type == QUIT:

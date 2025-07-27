@@ -19,16 +19,24 @@ class RodUtils:
 
         N = []
         B = []
-        for i in range(len(T) - 1):
-            dT = T[i+1] - T[i]
+        for i in range(len(T)):
+            # Default: try computing normal from adjacent tangents
+            if 0 < i < len(T) - 1:
+                dT = T[i+1] - T[i-1]
+            elif i < len(T) - 1:
+                dT = T[i+1] - T[i]
+            elif i > 0:
+                dT = T[i] - T[i-1]
+            else:
+                dT = np.zeros(3)
+
             norm_dT = np.linalg.norm(dT)
 
             if norm_dT < epsilon:
-                # Tangents are too similar — fallback needed
-                # Pick a normal perpendicular to T[i]
+                # Pick a fallback normal perpendicular to T[i]
                 candidate = fallback_up
-                if np.abs(np.dot(T[i], candidate)) > 0.99:  # nearly parallel
-                    candidate = np.array([1, 0, 0])  # try another axis
+                if np.abs(np.dot(T[i], candidate)) > 0.99:
+                    candidate = np.array([1, 0, 0])
                 b = np.cross(T[i], candidate)
                 b /= np.linalg.norm(b)
                 n = np.cross(b, T[i])
@@ -40,6 +48,7 @@ class RodUtils:
             B.append(b)
 
         return T, N, B
+
     
     @staticmethod
     def frenet_frame_lines(particles, T, N, B, scale=0.5):
