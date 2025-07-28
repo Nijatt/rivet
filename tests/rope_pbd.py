@@ -189,7 +189,7 @@ dt       = 1.0 / 60.0
 running  = True
 
 counter=0;
-total_frame = 1000;
+total_frame = 10000;
 while running:
     for e in pygame.event.get():
         if e.type == QUIT:

@@ -97,7 +97,7 @@ class PBDSolver:
                         g1 = self.elastic_rod.ghost_particles[g1]
                         g2 = self.elastic_rod.ghost_particles[g2]
 
-                        w0, w1, w2, gW1, gW2 = p0.inv_mass, p1.inv_mass, p2.inv_mass, g1.inv_mass, g2.inv_mass
+                        w0, w1, w2, wg1, wg2 = p0.inv_mass, p1.inv_mass, p2.inv_mass, g1.inv_mass, g2.inv_mass
 
                         #copy the position
                         x0 = p0.pred_transform.position
@@ -116,18 +116,47 @@ class PBDSolver:
 
                         darboux = RodUtils.darboux(frame0,frame1,arclenght);
 
-                        alpha = 0.2
+                        alpha = 1
                         constraint = RodUtils.bend_twist_constraint(rest_darboux,darboux,alpha);
                         
                         x = RodUtils.compute_x(frame0,frame1);
 
-                        status0 , dA1p0, dA1p1, dA1pg, dA2p0, dA2p1, dA2pg, dA3p0, dA3p1 = RodUtils.material_frame_derivatives(x0,  x1,  xg1, frame0) 
-                        status1 , dB1p0, dB1p1, dB1pg, dB2p0, dB2p1, dB2pg, dB3p0, dB3p1 = RodUtils.material_frame_derivatives(x1,  x2,  xg2, frame1) 
+                        status0 , dA1p0, dA1p1, dA1g1, dA2p0, dA2p1, dA2g1, dA3p0, dA3p1 = RodUtils.material_frame_derivatives(x0,  x1,  xg1, frame0) 
+                        status1 , dB1p1, dB1p2, dB1g2, dB2p1, dB2p2, dB2g2, dB3p1, dB3p2 = RodUtils.material_frame_derivatives(x1,  x2,  xg2, frame1) 
 
                         if not status0 or not status1:
                             continue  # or handle degeneracy accordingly
                         
-                    
+                        dOmegaDp0 = RodUtils.derivative_omega_p0(frame1, dA1p0, dA2p0, dA3p0, x, darboux, arclenght)
+                        dOmegaDp1 = RodUtils.derivative_omega_p1(frame0, frame1, dA1p1, dA2p1, dA3p1, dB1p1, dB2p1, dB3p1, x, darboux, arclenght)
+                        dOmegaDp2 = RodUtils.derivative_omega_p2(frame0, dB1p2, dB2p2, dB3p2, x, darboux, arclenght)
+                        dOmegaDg1 = RodUtils.derivative_omega_g1(frame1, dA1g1, dA2g1, x, darboux, arclenght)
+                        dOmegaDg2 = RodUtils.derivative_omega_g2(frame0, dB1g2, dB2g2, x, darboux, arclenght)
+
+                        efficient_mass = (
+                            w0 * dOmegaDp0.T @ dOmegaDp0 +
+                            w1 * dOmegaDp1.T @ dOmegaDp1 +
+                            w2 * dOmegaDp2.T @ dOmegaDp2 +
+                            wg1 * dOmegaDg1.T @ dOmegaDg1 +
+                            wg2 * dOmegaDg2.T @ dOmegaDg2
+                        )
+
+                        # lambda_val = -np.linalg.inv(efficient_mass) @ constraint
+
+                        print(efficient_mass)
+
+                        # dp0 = w0 * dOmegaDp0 @ lambda_val
+                        # dp1 = w1 * dOmegaDp1 @ lambda_val
+                        # dp2 = w2 * dOmegaDp2 @ lambda_val
+                        # dg1 = wg1 * dOmegaDg1 @ lambda_val
+                        # dg2 = wg2 * dOmegaDg2 @ lambda_val
+
+
+                        # p0.pred_transform.position = x0
+                        # p1.pred_transform.position = x1
+                        # g1.pred_transform.position = xg1
+
+
 
 
             # 3) update velocities & positions

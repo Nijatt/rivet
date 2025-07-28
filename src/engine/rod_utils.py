@@ -228,6 +228,86 @@ class RodUtils:
         d1pg = -S3 @ d2pg
 
         return True, d1p0, d1p1, d1pg, d2p0, d2p1, d2pg, d3p0, d3p1
+    
+
+    @staticmethod
+    def derivative_omega_p0(dB, dA1dp0, dA2dp0, dA3dp0, x, omega, arc_length):
+        sumP0 = dB[:, 0] @ dA1dp0 + dB[:, 1] @ dA2dp0 + dB[:, 2] @ dA3dp0
+
+        dOmegaDp0 = np.column_stack((
+            x * (dB[:, 2] @ dA2dp0 - dB[:, 1] @ dA3dp0) - 0.5 * x * omega[0] * sumP0,
+            x * (dB[:, 0] @ dA3dp0 - dB[:, 2] @ dA1dp0) - 0.5 * x * omega[1] * sumP0,
+            x * (dB[:, 1] @ dA1dp0 - dB[:, 0] @ dA2dp0) - 0.5 * x * omega[2] * sumP0
+        ))
+
+        dOmegaDp0 /= arc_length
+
+        return dOmegaDp0
+    
+    @staticmethod
+    def derivative_omega_p1(dA, dB, dA1dp1, dA2dp1, dA3dp1, dB1dp1, dB2dp1, dB3dp1, x, omega, arc_length):
+        sumP1A = dB[:, 0] @ dA1dp1 + dB[:, 1] @ dA2dp1 + dB[:, 2] @ dA3dp1
+        sumP1B = dA[:, 0] @ dB1dp1 + dA[:, 1] @ dB2dp1 + dA[:, 2] @ dB3dp1
+
+        dOmegaDp1X = (
+            x * (dB[:, 2] @ dA2dp1 - dB[:, 1] @ dA3dp1)
+            - 0.5 * x * omega[0] * sumP1A
+            - (x * (dA[:, 2] @ dB2dp1 - dA[:, 1] @ dB3dp1) - 0.5 * x * omega[0] * sumP1B)
+        )
+
+        dOmegaDp1Y = (
+            x * (dB[:, 0] @ dA3dp1 - dB[:, 2] @ dA1dp1)
+            - 0.5 * x * omega[1] * sumP1A
+            - (x * (dA[:, 0] @ dB3dp1 - dA[:, 2] @ dB1dp1) - 0.5 * x * omega[1] * sumP1B)
+        )
+
+        dOmegaDp1Z = (
+            x * (dB[:, 1] @ dA1dp1 - dB[:, 0] @ dA2dp1)
+            - 0.5 * x * omega[2] * sumP1A
+            - (x * (dA[:, 1] @ dB1dp1 - dA[:, 0] @ dB2dp1) - 0.5 * x * omega[2] * sumP1B)
+        )
+
+        dOmegaDp1 = np.column_stack((dOmegaDp1X, dOmegaDp1Y, dOmegaDp1Z)) / arc_length
+
+        return dOmegaDp1
+    
+    @staticmethod
+    def derivative_omega_p2(dA, dB1dp2, dB2dp2, dB3dp2, x, omega, arc_length):
+        sumP2 = dA[:, 0] @ dB1dp2 + dA[:, 1] @ dB2dp2 + dA[:, 2] @ dB3dp2
+
+        dOmegaDp2 = np.column_stack((
+            -x * (dA[:, 2] @ dB2dp2 - dA[:, 1] @ dB3dp2) - 0.5 * x * omega[0] * sumP2,
+            -x * (dA[:, 0] @ dB3dp2 - dA[:, 2] @ dB1dp2) - 0.5 * x * omega[1] * sumP2,
+            -x * (dA[:, 1] @ dB1dp2 - dA[:, 0] @ dB2dp2) - 0.5 * x * omega[2] * sumP2
+        )) / arc_length
+
+        return dOmegaDp2
+
+    @staticmethod
+    def derivative_omega_g1(dB, dA1dg1, dA2dg1, x, omega, arc_length):
+        sumG1 = dB[:, 0] @ dA1dg1 + dB[:, 1] @ dA2dg1
+
+        dOmegaDg1 = np.column_stack((
+            x * (dB[:, 2] @ dA2dg1) - 0.5 * x * omega[0] * sumG1,
+            x * (-dB[:, 2] @ dA1dg1) - 0.5 * x * omega[1] * sumG1,
+            x * (dB[:, 1] @ dA1dg1 - dB[:, 0] @ dA2dg1) - 0.5 * x * omega[2] * sumG1
+        )) / arc_length
+
+        return dOmegaDg1
+
+    @staticmethod
+    def derivative_omega_g2(dA, dB1dg2, dB2dg2, x, omega, arc_length):
+        sumG2 = dA[:, 0] @ dB1dg2 + dA[:, 1] @ dB2dg2
+
+        dOmegaDg2 = np.column_stack((
+            -x * (dA[:, 2] @ dB2dg2) - 0.5 * x * omega[0] * sumG2,
+            -x * (-dA[:, 2] @ dB1dg2) - 0.5 * x * omega[1] * sumG2,
+            -x * (dA[:, 1] @ dB1dg2 - dA[:, 0] @ dB2dg2) - 0.5 * x * omega[2] * sumG2
+        )) / arc_length
+
+        return dOmegaDg2
+
+
     # End Region ==================================
 
     # ==================================
