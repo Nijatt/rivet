@@ -66,7 +66,8 @@ for i in range(len(edges)):
     ghost_pos = center + ghost_offset
 
     e.g1 = i
-    e.ghost_rest_len = ghost_offset
+    # e.ghost_rest_len = ghost_offset
+    e.ghost_rest_len = SEG_LEN * GHOST_DIST_RATIO;
 
     ghost_rb = RigidBody(
         Transform(ghost_pos),
@@ -123,7 +124,7 @@ solver = PBDSolver(
     elastic_rod,
     gravity=np.array([0.0, -9.81, 0.0]),
     substeps=1,
-    iters=10
+    iters=5
 )
 
 # ───────────────────────── Simple collision helpers ─────────────────
@@ -168,7 +169,7 @@ dt       = 1.0 / 60.0
 running  = True
 
 counter=0;
-total_frame = 500;
+total_frame = 10;
 while running:
     for e in pygame.event.get():
         if e.type == QUIT:

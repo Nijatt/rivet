@@ -1,6 +1,6 @@
 # src/engine/core.py
 import numpy as np
-from engine.rod_utils import RodUtils
+from .rod_utils import RodUtils
 
 #TODO: gravity must be in z but we have unity consistent y
 class PBDSolver:
@@ -24,33 +24,33 @@ class PBDSolver:
                 b.vel += self.gravity * h
                 b.pred_transform.position = b.transform.position + b.vel * h
 
-            for e in self.elastic_rod.edges:
-                p0, p1  = self.elastic_rod.particles[e.p0], self.elastic_rod.particles[e.p1]
-                g1 = self.elastic_rod.ghost_particles[e.g1]
-                if g1.inv_mass == 0: continue
-                # midpoint velocity at current sub‑step
-                #Store midpoint velocity in the edge.
-                v_m_now  = 0.5 * (p0.vel + p1.vel)
+            # for e in self.elastic_rod.edges:
+            #     p0, p1  = self.elastic_rod.particles[e.p0], self.elastic_rod.particles[e.p1]
+            #     g1 = self.elastic_rod.ghost_particles[e.g1]
+            #     if g1.inv_mass == 0: continue
+            #     # midpoint velocity at current sub‑step
+            #     #Store midpoint velocity in the edge.
+            #     v_m_now  = 0.5 * (p0.vel + p1.vel)
 
-                # midpoint velocity at previous sub‑step (store it on the ghost)
-                v_m_old  = g1.mid_vel_prev if hasattr(g1, 'mid_vel_prev') else v_m_now
+            #     # midpoint velocity at previous sub‑step (store it on the ghost)
+            #     v_m_old  = g1.mid_vel_prev if hasattr(g1, 'mid_vel_prev') else v_m_now
 
-                # acceleration of midpoint
-                a_m      = (v_m_now - v_m_old) / dt
+            #     # acceleration of midpoint
+            #     a_m      = (v_m_now - v_m_old) / dt
 
-                # ratio r  (Eq. r = (a_m·g)/|g|²)
-                r        = np.dot(a_m, self.gravity) / self.g_norm2
+            #     # ratio r  (Eq. r = (a_m·g)/|g|²)
+            #     r        = np.dot(a_m, self.gravity) / self.g_norm2
 
-                # Δv = (1 – r) Δt g   —— distribute: −1 for ghost, +½ each to end points
-                dv       = (1.0 - r) * dt * self.gravity
+            #     # Δv = (1 – r) Δt g   —— distribute: −1 for ghost, +½ each to end points
+            #     dv       = (1.0 - r) * dt * self.gravity
 
-                g1.vel       -= dv                                     # v_g  ← v_g − Δv
-                p0.vel  += 0.5 * dv                               # v_{e‑1} += ½ Δv
-                p1.vel  += 0.5 * dv                               # v_e     += ½ Δv
+            #     g1.vel       -= dv                                     # v_g  ← v_g − Δv
+            #     p0.vel  += 0.5 * dv                               # v_{e‑1} += ½ Δv
+            #     p1.vel  += 0.5 * dv                               # v_e     += ½ Δv
 
-                # TODO: stash current midpoint velocity for next sub‑step
-                # g1.mid_vel_prev = v_m_now
-                g1.pred_transform.position = g1.transform.position + g1.vel * h
+            #     # TODO: stash current midpoint velocity for next sub‑step
+            #     # g1.mid_vel_prev = v_m_now
+            #     g1.pred_transform.position = g1.transform.position + g1.vel * h
 
 
             for b in self.elastic_rod.particles:
@@ -61,32 +61,36 @@ class PBDSolver:
             #NOTE: This segment of the code is an important part where we can test different type of solvers.
             #TODO: in current case test it with the GS. Then eventually move to the other system for better accurasy.
             for _ in range(self.iters):
-                for parity in (0, 1): 
-                    for ei in range(parity, len(self.elastic_rod.edges), 2):
-
-                        e   = self.elastic_rod.edges[ei]
+                # for parity in (0, 1): 
+                #     for ei in range(parity, len(self.elastic_rod.edges), 2):
+                    for e in self.elastic_rod.edges:
+                        # e   = self.elastic_rod.edges[ei]
 
                         i0, i1 , g1= e.p0, e.p1,e.g1
+
                         p0 = self.elastic_rod.particles[i0]
                         p1 = self.elastic_rod.particles[i1]
-                        g1 = self.elastic_rod.particles[g1]
+                        g1 = self.elastic_rod.ghost_particles[g1]
+                        w0, w1, gW1= p0.inv_mass, p1.inv_mass, g1.inv_mass
 
-                        w0, w1 = p0.inv_mass, p1.inv_mass
                         if w0 == 0.0 and w1 == 0.0:
                             continue
 
                         #copy the position
                         x0 = p0.pred_transform.position
                         x1 = p1.pred_transform.position
+                        xg1 =g1.pred_transform.position
 
-                        stiffness = 0.1
+                        stiffness = 0.5
+
                         x0, x1 = RodUtils.project_edge(x0, x1, w0, w1, e.rest_len, stiffness)
-
-
+                        x0, x1,xg1 = RodUtils.project_perpendicular_bisector(x0, x1,xg1, w0, w1,gW1, stiffness)
+                        x0, x1,xg1 = RodUtils.project_ghost_distance(x0, x1,xg1, w0, w1,gW1, e.ghost_rest_len, stiffness)
 
                         #Copy back.
                         p0.pred_transform.position = x0
                         p1.pred_transform.position = x1
+                        g1.pred_transform.position = xg1
 
 
 
@@ -95,9 +99,9 @@ class PBDSolver:
                 b.vel = (b.pred_transform.position - b.transform.position) / h
                 b.transform.position = b.pred_transform.position
 
-            for b in self.elastic_rod.ghost_particles:
-                b.vel = (b.pred_transform.position - b.transform.position) / h
-                b.transform.position = b.pred_transform.position
+            # for b in self.elastic_rod.ghost_particles:
+            #     b.vel = (b.pred_transform.position - b.transform.position) / h
+            #     b.transform.position = b.pred_transform.position
 
 
 

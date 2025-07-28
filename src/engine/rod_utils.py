@@ -94,6 +94,50 @@ class RodUtils:
         p1_updated = p1 + stiffness * w1 * lambda_val * g1
 
         return p0_updated, p1_updated
+    
+    @staticmethod
+    def project_ghost_distance(p0, p1, g, w0, w1, wG, rest_length, stiffness, epsilon=EPSILON6):
+        constraint = RodUtils.ghost_distance_constraint(p0, p1, g, rest_length)
+        
+        if abs(constraint) < epsilon:
+            return p0, p1, g
+
+        grad0, grad1, gradG = RodUtils.ghost_distance_jacobian(p0, p1, g)
+        denom = 0.25 * w0 + 0.25 * w1 + wG
+        if abs(denom) < epsilon:
+            return p0, p1, g
+
+        lambda_val = -constraint / denom
+        if np.isnan(lambda_val):
+            lambda_val = 0
+
+        p0 += stiffness * w0 * lambda_val * grad0
+        p1 += stiffness * w1 * lambda_val * grad1
+        g += stiffness * wG * lambda_val * gradG
+
+        return p0, p1, g
+
+    @staticmethod
+    def project_perpendicular_bisector(p0, p1, g, w0, w1, wG, stiffness, epsilon=EPSILON6):
+        constraint = RodUtils.perpendicular_bisector_constraint(p0, p1, g)
+        if abs(constraint) < epsilon:
+            return p0, p1, g
+
+        grad0, grad1, gradG = RodUtils.perp_bisector_jacobian(p0, p1, g)
+
+        denom = w0 * np.dot(grad0, grad0) + w1 * np.dot(grad1, grad1) + wG * np.dot(gradG, gradG)
+        if abs(denom) < epsilon:
+            return p0, p1, g
+
+        lambda_val = -constraint / denom
+        if np.isnan(lambda_val):
+            lambda_val = 0
+
+        p0 += stiffness * w0 * lambda_val * grad0
+        p1 += stiffness * w1 * lambda_val * grad1
+        g += stiffness * wG * lambda_val * gradG
+
+        return p0, p1, g
     # ==================================
 
     # ==================================
