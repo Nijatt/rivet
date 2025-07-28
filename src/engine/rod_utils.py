@@ -173,6 +173,61 @@ class RodUtils:
             return 0.0
 
         return 2.0 / denom
+    
+    @staticmethod
+    def skew(k):
+        return np.array([
+            [0.0, k[2], -k[1]],
+            [-k[2], 0.0, k[0]],
+            [k[1], -k[0], 0.0]
+        ])
+
+    @staticmethod
+    def outer(a, b):
+        return np.column_stack((a * b[0], a * b[1], a * b[2]))
+    
+    @staticmethod
+    def material_frame_derivatives(p0, p1, g, D, epsilon=EPSILON6):
+        p01 = p1 - p0
+        L = np.linalg.norm(p01)
+
+        if L < epsilon:
+            zero_mat = np.zeros((3, 3))
+            return False, zero_mat, zero_mat, zero_mat, zero_mat, zero_mat, zero_mat, zero_mat, zero_mat
+
+        d3 = D[:, 2]
+        proj_d3 = np.eye(3) - RodUtils.outer(d3, d3)
+        invL = 1.0 / L
+
+        d3p0 = -invL * proj_d3
+        d3p1 = invL * proj_d3
+
+        m = np.cross(p01, g - p0)
+        A = np.linalg.norm(m)
+        if A < epsilon:
+            zero_mat = np.zeros((3, 3))
+            return False, zero_mat, zero_mat, zero_mat, zero_mat, zero_mat, zero_mat, d3p0, d3p1
+
+        d2 = D[:, 1]
+        proj_d2 = np.eye(3) - RodUtils.outer(d2, d2)
+        invA = 1.0 / A
+
+        a0 = g - p1
+        a1 = p0 - g
+        a2 = p1 - p0
+
+        d2p0 = invA * proj_d2 @ RodUtils.skew(a0)
+        d2p1 = invA * proj_d2 @ RodUtils.skew(a1)
+        d2pg = invA * proj_d2 @ RodUtils.skew(a2)
+
+        S3 = RodUtils.skew(d3)
+        S2 = RodUtils.skew(d2)
+
+        d1p0 = S2 @ d3p0 - S3 @ d2p0
+        d1p1 = S2 @ d3p1 - S3 @ d2p1
+        d1pg = -S3 @ d2pg
+
+        return True, d1p0, d1p1, d1pg, d2p0, d2p1, d2pg, d3p0, d3p1
     # End Region ==================================
 
     # ==================================

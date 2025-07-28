@@ -84,8 +84,50 @@ class PBDSolver:
                         g1.pred_transform.position = xg1
 
                     for oe in self.elastic_rod.orientation_elements:
-                       pass
+                        #Get edges
+                        edge0 = self.elastic_rod.edges[oe.edge0]
+                        edge1 = self.elastic_rod.edges[oe.edge1]
 
+                        i0, i1, i2, g1,g2 = edge0.p0, edge0.p1, edge1.p1, edge0.g1, edge1.g1,
+
+                        p0 = self.elastic_rod.particles[i0]
+                        p1 = self.elastic_rod.particles[i1]
+                        p2 = self.elastic_rod.particles[i2]
+
+                        g1 = self.elastic_rod.ghost_particles[g1]
+                        g2 = self.elastic_rod.ghost_particles[g2]
+
+                        w0, w1, w2, gW1, gW2 = p0.inv_mass, p1.inv_mass, p2.inv_mass, g1.inv_mass, g2.inv_mass
+
+                        #copy the position
+                        x0 = p0.pred_transform.position
+                        x1 = p1.pred_transform.position
+                        x2 = p2.pred_transform.position
+
+                        xg1 =g1.pred_transform.position
+                        xg2 =g2.pred_transform.position
+
+                        rest_darboux = oe.rest_darboux
+
+                        frame0=RodUtils.build_frame(x0,x1,xg1)
+                        frame1=RodUtils.build_frame(x1,x2,xg2)
+
+                        arclenght = 0.5*(edge0.rest_len+edge1.rest_len)
+
+                        darboux = RodUtils.darboux(frame0,frame1,arclenght);
+
+                        alpha = 0.2
+                        constraint = RodUtils.bend_twist_constraint(rest_darboux,darboux,alpha);
+                        
+                        x = RodUtils.compute_x(frame0,frame1);
+
+                        status0 , dA1p0, dA1p1, dA1pg, dA2p0, dA2p1, dA2pg, dA3p0, dA3p1 = RodUtils.material_frame_derivatives(x0,  x1,  xg1, frame0) 
+                        status1 , dB1p0, dB1p1, dB1pg, dB2p0, dB2p1, dB2pg, dB3p0, dB3p1 = RodUtils.material_frame_derivatives(x1,  x2,  xg2, frame1) 
+
+                        if not status0 or not status1:
+                            continue  # or handle degeneracy accordingly
+                        
+                    
 
 
             # 3) update velocities & positions
