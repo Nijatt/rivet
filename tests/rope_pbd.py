@@ -16,7 +16,7 @@ from engine.rod_generator import RodGenerator
 # ───────────────────────── Rope construction ─────────────────────────
 ROPE_START   = np.array([1.0, 2.0, 1.0], dtype=float)   # first sphere centre
 SEG_LEN      = 1.0                                      # spacing along +X
-NUM_SPHERES  = 3                                       # 10 spheres → length 9
+NUM_SPHERES  = 3                                 # 10 spheres → length 9
 SPHERE_RAD   = 0.2
 DYNAMIC_MASS = 1.0                                      # every sphere except anchor
 GHOST_DIST_RATIO = 0.5 
@@ -144,7 +144,7 @@ solver = PBDSolver(
     elastic_rod,
     gravity=np.array([0.0, -9.81, 0.0]),
     substeps=1,
-    iters=5
+    iters=1
 )
 
 # ───────────────────────── Simple collision helpers ─────────────────
@@ -189,7 +189,7 @@ dt       = 1.0 / 60.0
 running  = True
 
 counter=0;
-total_frame = 10000;
+total_frame = 1000000;
 while running:
     for e in pygame.event.get():
         if e.type == QUIT:
@@ -200,10 +200,10 @@ while running:
         
     # solver.step(dt)
     
-    # 🎯 Recompute frames after the rod is updated
+    #  Recompute frames after the rod is updated
     # T, N, B = engine.rod_utils.RodUtils.frenet_frames(particles)
 
-    # 🎯 Rebuild debug lines
+    #  Rebuild debug lines
     # frame_lines = engine.rod_utils.RodUtils.frenet_frame_lines(particles, T, N, B)
 
     # camera input

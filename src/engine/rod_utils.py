@@ -161,7 +161,27 @@ class RodUtils:
         return numer * factor
     
     @staticmethod
-    def compute_x(frame0, frame1, epsilon=1e-8):
+    def darboux_clean(frame0: np.ndarray, frame1: np.ndarray, arc_length: float, epsilon: float = EPSILON8) -> np.ndarray:
+        """
+        Columns of frame{0,1} are d1|d2|d3 (orthonormal). Returns Darboux vector omega (shape (3,)).
+        """
+        # Relative rotation
+        R = frame1 @ frame0.T
+
+        # vee(R - R^T)
+        numer = np.array([
+            R[1, 2] - R[2, 1],
+            R[2, 0] - R[0, 2],
+            R[0, 1] - R[1, 0],
+        ])
+
+        trR = np.trace(R)
+        denom = max(epsilon, (1.0 + trR) * arc_length)  # protects 180° case and zero length
+        return (2.0 / denom) * numer
+
+    
+    @staticmethod
+    def compute_x(frame0, frame1, epsilon=EPSILON8):
         d0i, d1i = frame0[:, 0], frame1[:, 0]
         d0j, d1j = frame0[:, 1], frame1[:, 1]
         d0k, d1k = frame0[:, 2], frame1[:, 2]
@@ -175,16 +195,21 @@ class RodUtils:
         return 2.0 / denom
     
     @staticmethod
-    def skew(k):
+    def skew(k: np.ndarray) -> np.ndarray:
+        """Return the cross-product matrix so that skew(k) @ v == np.cross(k, v)."""
+        kx, ky, kz = k
         return np.array([
-            [0.0, k[2], -k[1]],
-            [-k[2], 0.0, k[0]],
-            [k[1], -k[0], 0.0]
-        ])
+            [ 0.0, -kz,  ky],
+            [ kz,  0.0, -kx],
+            [-ky,  kx,  0.0]
+        ], dtype=float)
 
     @staticmethod
-    def outer(a, b):
-        return np.column_stack((a * b[0], a * b[1], a * b[2]))
+    def outer(a: np.ndarray, b: np.ndarray) -> np.ndarray:
+        """Return the outer product a b^T."""
+        a = np.asarray(a, dtype=float).reshape(3,)
+        b = np.asarray(b, dtype=float).reshape(3,)
+        return np.outer(a, b)
     
     @staticmethod
     def material_frame_derivatives(p0, p1, g, D, epsilon=EPSILON6):
@@ -313,26 +338,29 @@ class RodUtils:
     # ==================================
     # Region: frame builders 
     @staticmethod
-    def build_frame(p0: np.ndarray, p1: np.ndarray, g1: np.ndarray) -> np.ndarray:
+    def build_frame(p0, p1, g, *, use_midpoint=False, cross_order="d3xg", epsilon=1e-8):
         """
-        Builds a 3x3 material frame matrix given three points.
-
-        :param p0: Starting point vector.
-        :param p1: Ending point vector.
-        :param g1: Guide point vector.
-        :return: 3x3 numpy array representing the frame matrix.
+        Returns [d1 | d2 | d3]. 
+        cross_order: "d3xg" uses d2 ∝ d3 × u; "gxd3" uses d2 ∝ u × d3.
+        use_midpoint: if True, u = g - (p0+p1)/2; else u = g - p0.
         """
-        d3 = (p1 - p0)
-        d3 /= np.linalg.norm(d3)
+        d3 = p1 - p0
+        n3 = np.linalg.norm(d3)
+        if n3 < epsilon:
+            raise ValueError("Degenerate edge.")
+        d3 /= n3
 
-        d2 = np.cross(d3, g1 - p0)
-        d2 /= np.linalg.norm(d2)
+        u = g - ((p0 + p1) * 0.5 if use_midpoint else p0)
+        d2 = np.cross(d3, u) if cross_order == "d3xg" else np.cross(u, d3)
+        n2 = np.linalg.norm(d2)
+        if n2 < epsilon:
+            raise ValueError("Guide parallel to tangent.")
+        d2 /= n2
 
-        d1 = np.cross(d2, d3)
+        d1 = np.cross(d2, d3)           # right-handed
+        d1 /= np.linalg.norm(d1)
 
-        frame_matrix = np.column_stack((d1, d2, d3))
-
-        return frame_matrix
+        return np.column_stack((d1, d2, d3))
 
 
     @staticmethod
@@ -393,6 +421,22 @@ class RodUtils:
             lines.append((p, p + b, (0, 0, 1)))  # Binormal → blue
 
         return lines
+    
+    @staticmethod
+    def solve_lambda(efficient_mass, constraint, method="pinv", rcond=1e-12):
+        M = 0.5*(efficient_mass + efficient_mass.T)  # symmetrize
+        c = np.asarray(constraint).reshape(3,)
+        if method == "pinv":
+            return -np.linalg.pinv(M, rcond=rcond) @ c
+        elif method == "tikhonov":
+            eps = 1e-8 * max(1.0, np.trace(M)/3.0)
+            return -np.linalg.solve(M + eps*np.eye(3), c)
+        elif method == "eigh":
+            w, V = np.linalg.eigh(M)
+            w = np.maximum(w, 1e-12)
+            return -(V @ ((V.T @ c) / w))
+        else:
+            raise ValueError("Unknown method")
     
 
 

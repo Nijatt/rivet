@@ -112,11 +112,13 @@ class PBDSolver:
                         frame0=RodUtils.build_frame(x0,x1,xg1)
                         frame1=RodUtils.build_frame(x1,x2,xg2)
 
+
                         arclenght = 0.5*(edge0.rest_len+edge1.rest_len)
 
                         darboux = RodUtils.darboux(frame0,frame1,arclenght);
+                        # darboux = RodUtils.darboux_clean(frame0,frame1,arclenght)
 
-                        alpha = 1
+                        alpha = 0.1
                         constraint = RodUtils.bend_twist_constraint(rest_darboux,darboux,alpha);
                         
                         x = RodUtils.compute_x(frame0,frame1);
@@ -133,6 +135,7 @@ class PBDSolver:
                         dOmegaDg1 = RodUtils.derivative_omega_g1(frame1, dA1g1, dA2g1, x, darboux, arclenght)
                         dOmegaDg2 = RodUtils.derivative_omega_g2(frame0, dB1g2, dB2g2, x, darboux, arclenght)
 
+
                         efficient_mass = (
                             w0 * dOmegaDp0.T @ dOmegaDp0 +
                             w1 * dOmegaDp1.T @ dOmegaDp1 +
@@ -141,20 +144,21 @@ class PBDSolver:
                             wg2 * dOmegaDg2.T @ dOmegaDg2
                         )
 
-                        # lambda_val = -np.linalg.inv(efficient_mass) @ constraint
 
-                        print(efficient_mass)
+                        lambda_val = -np.linalg.inv(efficient_mass) @ constraint
+                        print(darboux,constraint,lambda_val)
 
-                        # dp0 = w0 * dOmegaDp0 @ lambda_val
-                        # dp1 = w1 * dOmegaDp1 @ lambda_val
-                        # dp2 = w2 * dOmegaDp2 @ lambda_val
-                        # dg1 = wg1 * dOmegaDg1 @ lambda_val
-                        # dg2 = wg2 * dOmegaDg2 @ lambda_val
+                        dp0 = w0 * dOmegaDp0 @ lambda_val
+                        dp1 = w1 * dOmegaDp1 @ lambda_val
+                        dp2 = w2 * dOmegaDp2 @ lambda_val
+                        dg1 = wg1 * dOmegaDg1 @ lambda_val
+                        dg2 = wg2 * dOmegaDg2 @ lambda_val
 
-
-                        # p0.pred_transform.position = x0
-                        # p1.pred_transform.position = x1
-                        # g1.pred_transform.position = xg1
+                        p0.pred_transform.position += dp0
+                        p1.pred_transform.position += dp1
+                        p2.pred_transform.position += dp2
+                        g1.pred_transform.position += dg1
+                        g2.pred_transform.position += dg2
 
 
 
