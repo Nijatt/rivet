@@ -8,6 +8,7 @@ class PBDSolver:
         self.elastic_rod, self.gravity = elastic_rod, gravity
         self.substeps, self.iters = substeps, iters
         self.g_norm2 = np.dot(self.gravity, self.gravity) 
+        self.linear_damping = 0.95;
     
     #NOTE: we are going to define the whole solver here for the sake of simplicity
     #NOTE: the constraints will be solved here.
@@ -16,17 +17,23 @@ class PBDSolver:
     #TODO: separate the algorithm so you can use substeps.
     def step(self, dt):
         h = dt / self.substeps
-
+        linear_damping =  1 / (1 + dt * self.linear_damping);
         for _ in range(self.substeps):
             # 1) apply gravity & predict positions
             for b in self.elastic_rod.particles:
                 if b.inv_mass == 0: continue
+                b.vel*=linear_damping;
                 b.vel += self.gravity * h
                 b.pred_transform.position = b.transform.position + b.vel * h
 
             for e in self.elastic_rod.edges:
                 p0, p1  = self.elastic_rod.particles[e.p0], self.elastic_rod.particles[e.p1]
                 g1 = self.elastic_rod.ghost_particles[e.g1]
+
+                #NOTE: do I need to update gravity
+
+                g1.vel*=linear_damping;
+                
                 if g1.inv_mass == 0: continue
    
                 v_m_now  = 0.5 * (p0.vel + p1.vel)
@@ -116,10 +123,10 @@ class PBDSolver:
                         arclenght = 0.5*(edge0.rest_len+edge1.rest_len)
 
                         darboux = RodUtils.darboux(frame0,frame1,arclenght);
-                        # darboux = RodUtils.darboux_clean(frame0,frame1,arclenght)
 
-                        alpha = 0.1
-                        constraint = RodUtils.bend_twist_constraint(rest_darboux,darboux,alpha);
+                        alpha  = np.array([0.8,0.8,0.4])
+
+                        constraint = RodUtils.bend_twist_constraint(darboux,rest_darboux,alpha);
                         
                         x = RodUtils.compute_x(frame0,frame1);
 
@@ -135,7 +142,7 @@ class PBDSolver:
                         dOmegaDg1 = RodUtils.derivative_omega_g1(frame1, dA1g1, dA2g1, x, darboux, arclenght)
                         dOmegaDg2 = RodUtils.derivative_omega_g2(frame0, dB1g2, dB2g2, x, darboux, arclenght)
 
-
+                        
                         efficient_mass = (
                             w0 * dOmegaDp0.T @ dOmegaDp0 +
                             w1 * dOmegaDp1.T @ dOmegaDp1 +
@@ -143,16 +150,17 @@ class PBDSolver:
                             wg1 * dOmegaDg1.T @ dOmegaDg1 +
                             wg2 * dOmegaDg2.T @ dOmegaDg2
                         )
-
+                        
 
                         lambda_val = -np.linalg.inv(efficient_mass) @ constraint
-                        print(darboux,constraint,lambda_val)
 
                         dp0 = w0 * dOmegaDp0 @ lambda_val
                         dp1 = w1 * dOmegaDp1 @ lambda_val
                         dp2 = w2 * dOmegaDp2 @ lambda_val
                         dg1 = wg1 * dOmegaDg1 @ lambda_val
                         dg2 = wg2 * dOmegaDg2 @ lambda_val
+
+                       
 
                         p0.pred_transform.position += dp0
                         p1.pred_transform.position += dp1

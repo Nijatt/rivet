@@ -16,25 +16,25 @@ from engine.rod_generator import RodGenerator
 # ───────────────────────── Rope construction ─────────────────────────
 ROPE_START   = np.array([1.0, 2.0, 1.0], dtype=float)   # first sphere centre
 SEG_LEN      = 1.0                                      # spacing along +X
-NUM_SPHERES  = 3                                 # 10 spheres → length 9
-SPHERE_RAD   = 0.2
-DYNAMIC_MASS = 1.0                                      # every sphere except anchor
+NUM_SPHERES  = 5                               # 10 spheres → length 9
+SPHERE_RAD   = 0.1
+DYNAMIC_MASS = 0.1                                     # every sphere except anchor
 GHOST_DIST_RATIO = 0.5 
-GHOST_MASS_RATIO = 1.0 
+GHOST_MASS_RATIO = 0.25 
 
-#Generate particles
+# Generate particles
 particles = []
 for i in range(NUM_SPHERES):
     pos  = ROPE_START + np.array([i * SEG_LEN, 0.0, 0.0])
     particles.append(RigidBody(Transform(pos), mass=DYNAMIC_MASS, radius=SPHERE_RAD))
 
 
-# # NOTE:sprial generator.
+# NOTE:sprial generator.
 # spiral_positions = RodGenerator.generate_spiral(
 #     num_points=NUM_SPHERES,
-#     radius=3,
+#     radius=2,
 #     pitch=2,
-#     turns=5.0,
+#     turns=1.0,
 #     start=ROPE_START
 # )
 
@@ -142,9 +142,9 @@ def rope_lines():
 # ───────────────────────── XPBD solver ───────────────────────────────
 solver = PBDSolver(
     elastic_rod,
-    gravity=np.array([0.0, -9.81, 0.0]),
+    gravity=np.array([0.0, -9.81, 0]),
     substeps=1,
-    iters=1
+    iters=5
 )
 
 # ───────────────────────── Simple collision helpers ─────────────────
@@ -183,13 +183,15 @@ def collide_sphere_sphere(a: RigidBody, b: RigidBody, restitution=0.2):
 
 # ───────────────────────── Rendering loop ───────────────────────────
 pygame.init()
+pygame.display.set_caption("RIVET")
 renderer = OpenGLRenderer()
 clock    = pygame.time.Clock()
 dt       = 1.0 / 60.0
 running  = True
 
 counter=0;
-total_frame = 1000000;
+total_frame = 50000000;
+
 while running:
     for e in pygame.event.get():
         if e.type == QUIT:
@@ -200,36 +202,9 @@ while running:
         
     # solver.step(dt)
     
-    #  Recompute frames after the rod is updated
-    # T, N, B = engine.rod_utils.RodUtils.frenet_frames(particles)
-
-    #  Rebuild debug lines
-    # frame_lines = engine.rod_utils.RodUtils.frenet_frame_lines(particles, T, N, B)
-
-    # camera input
     keys = pygame.key.get_pressed()
     renderer.camera.handle_input(keys, dt)
-    # for i in range(NUM_SPHERES - 2):
-    #     e0 = edges[i]
-    #     e1 = edges[i+1]
-        
-    #     #Get particles
-    #     p0 = particles[e0.p0].transform.position
-    #     p1 = particles[e0.p1].transform.position
-    #     p2 = particles[e1.p1].transform.position
-        
-    #     #get ghosts
-    #     g1 = ghost_particles[e0.g1].transform.position
-    #     g2 = ghost_particles[e1.g1].transform.position
-        
-    #     #Get frames
-    #     frame0 = engine.rod_utils.RodUtils.build_frame(p0,p1,g1)
-    #     frame1 = engine.rod_utils.RodUtils.build_frame(p1,p2,g2)
-    #     arclenght = 0.5*(e0.rest_len+e1.rest_len)
-    #     restDarbouxVector = engine.rod_utils.RodUtils.darboux(frame0,frame1,arclenght);
-    #     print(restDarbouxVector)
-
-    # draw
+ 
     renderer.render(elastic_rod.particles + elastic_rod.ghost_particles,rope_lines())
     clock.tick(60)
 
