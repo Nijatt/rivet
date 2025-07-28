@@ -25,9 +25,8 @@ class RodUtils:
         return np.linalg.norm(0.5 * (p1 + p0) - g1) - ghost_rest_length
 
     @staticmethod
-    def bend_twist_constraint(omega, rest_omega):
-        return omega - rest_omega  # Component-wise subtraction
-    
+    def bend_twist_constraint(omega, rest_omega,alpha):
+        return alpha*(omega - rest_omega) 
     # ==================================
 
     # ==================================

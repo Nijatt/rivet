@@ -24,33 +24,24 @@ class PBDSolver:
                 b.vel += self.gravity * h
                 b.pred_transform.position = b.transform.position + b.vel * h
 
-            # for e in self.elastic_rod.edges:
-            #     p0, p1  = self.elastic_rod.particles[e.p0], self.elastic_rod.particles[e.p1]
-            #     g1 = self.elastic_rod.ghost_particles[e.g1]
-            #     if g1.inv_mass == 0: continue
-            #     # midpoint velocity at current sub‑step
-            #     #Store midpoint velocity in the edge.
-            #     v_m_now  = 0.5 * (p0.vel + p1.vel)
+            for e in self.elastic_rod.edges:
+                p0, p1  = self.elastic_rod.particles[e.p0], self.elastic_rod.particles[e.p1]
+                g1 = self.elastic_rod.ghost_particles[e.g1]
+                if g1.inv_mass == 0: continue
+   
+                v_m_now  = 0.5 * (p0.vel + p1.vel)
+                v_m_old = e.edge_mid_prev_velocity
+                a_m  = (v_m_now - v_m_old) / dt
+               
+                r = np.dot(a_m, self.gravity) / self.g_norm2
+                dv  = (1.0 - r) * dt * self.gravity
 
-            #     # midpoint velocity at previous sub‑step (store it on the ghost)
-            #     v_m_old  = g1.mid_vel_prev if hasattr(g1, 'mid_vel_prev') else v_m_now
+                g1.vel -= dv 
+                p0.vel += 0.5 * dv 
+                p1.vel += 0.5 * dv 
 
-            #     # acceleration of midpoint
-            #     a_m      = (v_m_now - v_m_old) / dt
-
-            #     # ratio r  (Eq. r = (a_m·g)/|g|²)
-            #     r        = np.dot(a_m, self.gravity) / self.g_norm2
-
-            #     # Δv = (1 – r) Δt g   —— distribute: −1 for ghost, +½ each to end points
-            #     dv       = (1.0 - r) * dt * self.gravity
-
-            #     g1.vel       -= dv                                     # v_g  ← v_g − Δv
-            #     p0.vel  += 0.5 * dv                               # v_{e‑1} += ½ Δv
-            #     p1.vel  += 0.5 * dv                               # v_e     += ½ Δv
-
-            #     # TODO: stash current midpoint velocity for next sub‑step
-            #     # g1.mid_vel_prev = v_m_now
-            #     g1.pred_transform.position = g1.transform.position + g1.vel * h
+                e.edge_mid_prev_velocity = v_m_now
+                g1.pred_transform.position = g1.transform.position + g1.vel * h
 
 
             for b in self.elastic_rod.particles:
@@ -99,9 +90,9 @@ class PBDSolver:
                 b.vel = (b.pred_transform.position - b.transform.position) / h
                 b.transform.position = b.pred_transform.position
 
-            # for b in self.elastic_rod.ghost_particles:
-            #     b.vel = (b.pred_transform.position - b.transform.position) / h
-            #     b.transform.position = b.pred_transform.position
+            for b in self.elastic_rod.ghost_particles:
+                b.vel = (b.pred_transform.position - b.transform.position) / h
+                b.transform.position = b.pred_transform.position
 
 
 
