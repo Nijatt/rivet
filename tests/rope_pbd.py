@@ -16,7 +16,7 @@ from engine.rod_generator import RodGenerator
 # ───────────────────────── Rope construction ─────────────────────────
 ROPE_START   = np.array([1.0, 2.0, 1.0], dtype=float)   # first sphere centre
 SEG_LEN      = 1.0                                      # spacing along +X
-NUM_SPHERES  = 10                                       # 10 spheres → length 9
+NUM_SPHERES  = 3                                       # 10 spheres → length 9
 SPHERE_RAD   = 0.2
 DYNAMIC_MASS = 1.0                                      # every sphere except anchor
 GHOST_DIST_RATIO = 0.5 
@@ -29,7 +29,7 @@ for i in range(NUM_SPHERES):
     particles.append(RigidBody(Transform(pos), mass=DYNAMIC_MASS, radius=SPHERE_RAD))
 
 
-#NOTE:sprial generator.
+# # NOTE:sprial generator.
 # spiral_positions = RodGenerator.generate_spiral(
 #     num_points=NUM_SPHERES,
 #     radius=3,
@@ -83,15 +83,35 @@ for i in range(len(edges)):
 #NOTE: lets do stupid check
 particles[0].inv_mass = 0;
 particles[0].mass = 0;
+particles[1].inv_mass = 0;
+particles[1].mass = 0;
+ghost_particles[0].inv_mass = 0;
+ghost_particles[0].mass = 0;
 
 #Generate edges
 orientation_elements = []
-for i in range(NUM_SPHERES - 1):
-    #TODO: get frame element
-    # edgeFrame0 = edges[i].get_frame();
-    # edgeFrame1 = edges[i + 1].get_frame();
-    restDarbouxVector = 0 #TODO: Calculate the darboux
+for i in range(NUM_SPHERES - 2):
+    #Get edges
+    e0 = edges[i]
+    e1 = edges[i+1]
+    
+    #Get particles
+    p0 = particles[e0.p0].transform.position
+    p1 = particles[e0.p1].transform.position
+    p2 = particles[e1.p1].transform.position
+    
+    #get ghosts
+    g1 = ghost_particles[e0.g1].transform.position
+    g2 = ghost_particles[e1.g1].transform.position
+    
+    #Get frames
+    frame0 = engine.rod_utils.RodUtils.build_frame(p0,p1,g1)
+    frame1 = engine.rod_utils.RodUtils.build_frame(p1,p2,g2)
+    arclenght = 0.5*(e0.rest_len+e1.rest_len)
+    restDarbouxVector = engine.rod_utils.RodUtils.darboux(frame0,frame1,arclenght);
+    print(restDarbouxVector)
     orientation_elements.append(OrientationElement(i, i + 1, restDarbouxVector))
+
 
 
 #Create rope
@@ -189,6 +209,25 @@ while running:
     # camera input
     keys = pygame.key.get_pressed()
     renderer.camera.handle_input(keys, dt)
+    # for i in range(NUM_SPHERES - 2):
+    #     e0 = edges[i]
+    #     e1 = edges[i+1]
+        
+    #     #Get particles
+    #     p0 = particles[e0.p0].transform.position
+    #     p1 = particles[e0.p1].transform.position
+    #     p2 = particles[e1.p1].transform.position
+        
+    #     #get ghosts
+    #     g1 = ghost_particles[e0.g1].transform.position
+    #     g2 = ghost_particles[e1.g1].transform.position
+        
+    #     #Get frames
+    #     frame0 = engine.rod_utils.RodUtils.build_frame(p0,p1,g1)
+    #     frame1 = engine.rod_utils.RodUtils.build_frame(p1,p2,g2)
+    #     arclenght = 0.5*(e0.rest_len+e1.rest_len)
+    #     restDarbouxVector = engine.rod_utils.RodUtils.darboux(frame0,frame1,arclenght);
+    #     print(restDarbouxVector)
 
     # draw
     renderer.render(elastic_rod.particles + elastic_rod.ghost_particles,rope_lines())

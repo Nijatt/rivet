@@ -27,7 +27,7 @@ class RodUtils:
     @staticmethod
     def bend_twist_constraint(omega, rest_omega,alpha):
         return alpha*(omega - rest_omega) 
-    # ==================================
+    # End Region ==================================
 
     # ==================================
     # Regions: jacobians.
@@ -66,7 +66,7 @@ class RodUtils:
             grad_g = r_hat
 
         return grad0, grad1, grad_g
-    # ==================================
+    # End Region ==================================
 
     # ==================================
     # Region: projections
@@ -137,7 +137,43 @@ class RodUtils:
         g += stiffness * wG * lambda_val * gradG
 
         return p0, p1, g
+    # End Region ==================================
+    
     # ==================================
+    #Region: rotational constraints.
+    @staticmethod
+    def darboux(frame0, frame1, arc_length, epsilon=EPSILON8):
+        d0i, d1i = frame0[:, 0], frame1[:, 0]
+        d0j, d1j = frame0[:, 1], frame1[:, 1]
+        d0k, d1k = frame0[:, 2], frame1[:, 2]
+
+        dot_sum = np.dot(d0i, d1i) + np.dot(d0j, d1j) + np.dot(d0k, d1k)
+        denom = max(epsilon, (1.0 + dot_sum) * arc_length)
+
+        factor = 2.0 / denom
+
+        numer = np.array([
+            np.dot(d0j, d1k) - np.dot(d0k, d1j),
+            np.dot(d0k, d1i) - np.dot(d0i, d1k),
+            np.dot(d0i, d1j) - np.dot(d0j, d1i)
+        ])
+
+        return numer * factor
+    
+    @staticmethod
+    def compute_x(frame0, frame1, epsilon=1e-8):
+        d0i, d1i = frame0[:, 0], frame1[:, 0]
+        d0j, d1j = frame0[:, 1], frame1[:, 1]
+        d0k, d1k = frame0[:, 2], frame1[:, 2]
+
+        dot_sum = np.dot(d0i, d1i) + np.dot(d0j, d1j) + np.dot(d0k, d1k)
+        denom = 1.0 + dot_sum
+
+        if denom <= epsilon:
+            return 0.0
+
+        return 2.0 / denom
+    # End Region ==================================
 
     # ==================================
     # Region: frame builders 
@@ -202,7 +238,7 @@ class RodUtils:
             B.append(b)
 
         return T, N, B
-
+    # End Region ==================================
     
 
     #Drawing helper methods
