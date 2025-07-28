@@ -83,6 +83,9 @@ class PBDSolver:
                         p1.pred_transform.position = x1
                         g1.pred_transform.position = xg1
 
+                    for oe in self.elastic_rod.orientation_elements:
+                       pass
+
 
 
             # 3) update velocities & positions

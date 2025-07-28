@@ -16,7 +16,7 @@ from engine.rod_generator import RodGenerator
 # ───────────────────────── Rope construction ─────────────────────────
 ROPE_START   = np.array([1.0, 2.0, 1.0], dtype=float)   # first sphere centre
 SEG_LEN      = 1.0                                      # spacing along +X
-NUM_SPHERES  = 3                                       # 10 spheres → length 9
+NUM_SPHERES  = 5                                       # 10 spheres → length 9
 SPHERE_RAD   = 0.2
 DYNAMIC_MASS = 1.0                                      # every sphere except anchor
 GHOST_DIST_RATIO = 0.5 
@@ -144,7 +144,7 @@ solver = PBDSolver(
     elastic_rod,
     gravity=np.array([0.0, -9.81, 0.0]),
     substeps=1,
-    iters=1
+    iters=5
 )
 
 # ───────────────────────── Simple collision helpers ─────────────────
