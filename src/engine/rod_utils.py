@@ -1,14 +1,98 @@
 import numpy as np
 
+
 class RodUtils:
+    EPSILON8 = 1e-8
+    EPSILON6 = 1e-6
+    EPSILON4 = 1e-4
+
     def __init__(self):
         raise NotImplementedError("This class should not be instantiated.")
-    
-    #Testing the static class.
+    # ==================================
+    # REGION: Edge Constraints
     @staticmethod
-    def generate_frame(p0, p1, g1):
-        frame = np.array([[1,0,0],[0,1,0],[0,0,1]]);
-        return frame
+    def edge_constraint(p0, p1, rest_length):
+        return np.linalg.norm(p0 - p1) - rest_length
+
+    @staticmethod
+    def perpendicular_bisector_constraint(p0, p1, g1):
+        left_side = g1 - 0.5 * (p1 + p0)
+        right_side = p1 - p0
+        return np.dot(left_side, right_side)
+
+    @staticmethod
+    def ghost_distance_constraint(p0, p1, g1, ghost_rest_length):
+        return np.linalg.norm(0.5 * (p1 + p0) - g1) - ghost_rest_length
+
+    @staticmethod
+    def bend_twist_constraint(omega, rest_omega):
+        return omega - rest_omega  # Component-wise subtraction
+    
+    # ==================================
+
+    # ==================================
+    # Regions: jacobians.
+    @staticmethod
+    def edge_jacobian(p0, p1, epsilon=EPSILON6):
+        d = p0 - p1
+        len_d = np.linalg.norm(d)
+
+        if len_d < epsilon:
+            grad0 = grad1 = np.zeros(3)
+        else:
+            d_hat = d / len_d
+            grad0 = d_hat
+            grad1 = -d_hat
+
+        return grad0, grad1
+
+    @staticmethod
+    def perp_bisector_jacobian(p0, p1, g):
+        grad0 = p0 - g
+        grad1 = g - p1
+        grad_g = p1 - p0
+        return grad0, grad1, grad_g
+
+    @staticmethod
+    def ghost_distance_jacobian(p0, p1, g, epsilon=EPSILON6):
+        r = g - 0.5 * (p0 + p1)
+        len_r = np.linalg.norm(r)
+
+        if len_r < epsilon:
+            grad0 = grad1 = grad_g = np.zeros(3)
+        else:
+            r_hat = r / len_r
+            grad0 = -0.5 * r_hat
+            grad1 = -0.5 * r_hat
+            grad_g = r_hat
+
+        return grad0, grad1, grad_g
+    # ==================================
+
+    # ==================================
+    # Region: frame builders 
+    @staticmethod
+    def build_frame(p0: np.ndarray, p1: np.ndarray, g1: np.ndarray) -> np.ndarray:
+        """
+        Builds a 3x3 material frame matrix given three points.
+
+        :param p0: Starting point vector.
+        :param p1: Ending point vector.
+        :param g1: Guide point vector.
+        :return: 3x3 numpy array representing the frame matrix.
+        """
+        d3 = (p1 - p0)
+        d3 /= np.linalg.norm(d3)
+
+        d2 = np.cross(d3, g1 - p0)
+        d2 /= np.linalg.norm(d2)
+
+        d1 = np.cross(d2, d3)
+
+        frame_matrix = np.column_stack((d1, d2, d3))
+
+        return frame_matrix
+
 
     @staticmethod
     def frenet_frames(particles, fallback_up=np.array([0, 1, 0]), epsilon=1e-6):
@@ -50,6 +134,8 @@ class RodUtils:
         return T, N, B
 
     
+
+    #Drawing helper methods
     @staticmethod
     def frenet_frame_lines(particles, T, N, B, scale=0.5):
         lines = []
@@ -66,5 +152,6 @@ class RodUtils:
             lines.append((p, p + b, (0, 0, 1)))  # Binormal → blue
 
         return lines
+    
 
 
