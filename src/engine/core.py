@@ -26,8 +26,9 @@ class PBDSolver:
             for e in self.elastic_rod.edges:
                 p0, p1  = self.elastic_rod.particles[e.p0], self.elastic_rod.particles[e.p1]
                 g1 = self.elastic_rod.ghost_particles[e.g1]
-
+                if g1.inv_mass == 0: continue
                 # midpoint velocity at current sub‑step
+                #Store midpoint velocity in the edge.
                 v_m_now  = 0.5 * (p0.vel + p1.vel)
 
                 # midpoint velocity at previous sub‑step (store it on the ghost)
@@ -52,6 +53,7 @@ class PBDSolver:
 
 
             for b in self.elastic_rod.particles:
+                if b.inv_mass == 0: continue
                 b.pred_transform.position = b.transform.position + b.vel * h
 
 

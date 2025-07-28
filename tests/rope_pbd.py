@@ -16,31 +16,31 @@ from engine.rod_generator import RodGenerator
 # ───────────────────────── Rope construction ─────────────────────────
 ROPE_START   = np.array([1.0, 2.0, 1.0], dtype=float)   # first sphere centre
 SEG_LEN      = 1.0                                      # spacing along +X
-NUM_SPHERES  = 50                                       # 10 spheres → length 9
+NUM_SPHERES  = 10                                       # 10 spheres → length 9
 SPHERE_RAD   = 0.2
 DYNAMIC_MASS = 1.0                                      # every sphere except anchor
 GHOST_DIST_RATIO = 0.5 
 GHOST_MASS_RATIO = 1.0 
 
 #Generate particles
-# particles = []
-# for i in range(NUM_SPHERES):
-#     pos  = ROPE_START + np.array([i * SEG_LEN, 0.0, 0.0])
-#     particles.append(RigidBody(Transform(pos), mass=DYNAMIC_MASS, radius=SPHERE_RAD))
-
-
-#NOTE:sprial generator.
-spiral_positions = RodGenerator.generate_spiral(
-    num_points=NUM_SPHERES,
-    radius=3,
-    pitch=2,
-    turns=5.0,
-    start=ROPE_START
-)
-
 particles = []
-for pos in spiral_positions:
+for i in range(NUM_SPHERES):
+    pos  = ROPE_START + np.array([i * SEG_LEN, 0.0, 0.0])
     particles.append(RigidBody(Transform(pos), mass=DYNAMIC_MASS, radius=SPHERE_RAD))
+
+
+# #NOTE:sprial generator.
+# spiral_positions = RodGenerator.generate_spiral(
+#     num_points=NUM_SPHERES,
+#     radius=3,
+#     pitch=2,
+#     turns=5.0,
+#     start=ROPE_START
+# )
+
+# particles = []
+# for pos in spiral_positions:
+#     particles.append(RigidBody(Transform(pos), mass=DYNAMIC_MASS, radius=SPHERE_RAD))
 
 
 T, N, B  = engine.rod_utils.RodUtils.frenet_frames(particles);
@@ -123,7 +123,7 @@ solver = PBDSolver(
     elastic_rod,
     gravity=np.array([0.0, -9.81, 0.0]),
     substeps=1,
-    iters=1
+    iters=10
 )
 
 # ───────────────────────── Simple collision helpers ─────────────────
@@ -168,7 +168,7 @@ dt       = 1.0 / 60.0
 running  = True
 
 counter=0;
-total_frame = 10;
+total_frame = 10000000;
 while running:
     for e in pygame.event.get():
         if e.type == QUIT:
