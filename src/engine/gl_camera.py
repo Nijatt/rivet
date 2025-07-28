@@ -9,6 +9,27 @@ def _normalize(v):
 
 def _deg2rad(d): return d * math.pi / 180.0
 
+def screen_to_world_ray(mouse_x, mouse_y, screen_size, view_matrix, proj_matrix):
+    """
+    Convert screen coordinates to a world-space ray.
+    """
+    x = (2.0 * mouse_x) / screen_size[0] - 1.0
+    y = 1.0 - (2.0 * mouse_y) / screen_size[1]  # flip y
+    ray_clip = np.array([x, y, -1.0, 1.0])
+
+    inv_proj = np.linalg.inv(proj_matrix)
+    inv_view = np.linalg.inv(view_matrix)
+
+    ray_eye = inv_proj @ ray_clip
+    ray_eye = np.array([ray_eye[0], ray_eye[1], -1.0, 0.0])
+
+    ray_world = inv_view @ ray_eye
+    ray_world = ray_world[:3]
+    ray_world /= np.linalg.norm(ray_world)
+
+    cam_origin = inv_view[:3, 3]
+    return cam_origin, ray_world
+
 # ───────────────────────── Camera ──────────────────────────────
 class Camera:
     def __init__(self,

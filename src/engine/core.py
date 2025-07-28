@@ -124,7 +124,7 @@ class PBDSolver:
 
                         darboux = RodUtils.darboux(frame0,frame1,arclenght);
 
-                        alpha  = np.array([0.8,0.8,0.4])
+                        alpha  = np.array([0.2,0.2,0.1])
 
                         constraint = RodUtils.bend_twist_constraint(darboux,rest_darboux,alpha);
                         
