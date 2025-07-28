@@ -70,6 +70,33 @@ class RodUtils:
     # ==================================
 
     # ==================================
+    # Region: projections
+    @staticmethod
+    def project_edge(p0, p1, w0, w1, rest_length, stiffness, epsilon=EPSILON6):
+        constraint = RodUtils.edge_constraint(p0, p1, rest_length)
+
+        if abs(constraint) < epsilon:
+            return p0, p1
+
+        g0, g1 = RodUtils.edge_jacobian(p0, p1)
+
+        denom = w0 + w1
+
+        if denom < epsilon:
+            return p0, p1
+
+        lambda_val = -constraint / denom
+
+        if np.isnan(lambda_val):
+            lambda_val = 0
+
+        p0_updated = p0 + stiffness * w0 * lambda_val * g0
+        p1_updated = p1 + stiffness * w1 * lambda_val * g1
+
+        return p0_updated, p1_updated
+    # ==================================
+
+    # ==================================
     # Region: frame builders 
     @staticmethod
     def build_frame(p0: np.ndarray, p1: np.ndarray, g1: np.ndarray) -> np.ndarray:

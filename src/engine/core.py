@@ -1,5 +1,6 @@
 # src/engine/core.py
 import numpy as np
+from engine.rod_utils import RodUtils
 
 #TODO: gravity must be in z but we have unity consistent y
 class PBDSolver:
@@ -65,48 +66,28 @@ class PBDSolver:
 
                         e   = self.elastic_rod.edges[ei]
 
-                        i0, i1 = e.p0, e.p1
+                        i0, i1 , g1= e.p0, e.p1,e.g1
                         p0 = self.elastic_rod.particles[i0]
                         p1 = self.elastic_rod.particles[i1]
+                        g1 = self.elastic_rod.particles[g1]
 
                         w0, w1 = p0.inv_mass, p1.inv_mass
                         if w0 == 0.0 and w1 == 0.0:
                             continue
 
+                        #copy the position
                         x0 = p0.pred_transform.position
                         x1 = p1.pred_transform.position
 
-                        d   = x1 - x0
-                        L   = np.linalg.norm(d)
-                        if L < 1e-8:
-                            continue
+                        stiffness = 0.1
+                        x0, x1 = RodUtils.project_edge(x0, x1, w0, w1, e.rest_len, stiffness)
 
-                        C   = L - e.rest_len
-                        n   = d / L
-                        wsum = w0 + w1
-                        
-                        if wsum == 0.0:
-                            continue
 
-                        corr_mag = C / wsum
 
-                        # bail if anything is non-finite
-                        if not np.isfinite(corr_mag):
-                            continue
-
-                        corr = corr_mag * n
-                        if not np.all(np.isfinite(corr)):
-                            continue
-                        
-                        stiffness = 1
-
-                        if w0 != 0.0:
-                            x0 += stiffness*w0 * corr
-                        if w1 != 0.0:
-                            x1 -= stiffness*w1 * corr
-
+                        #Copy back.
                         p0.pred_transform.position = x0
                         p1.pred_transform.position = x1
+
 
 
             # 3) update velocities & positions

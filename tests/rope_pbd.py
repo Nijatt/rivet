@@ -16,7 +16,7 @@ from engine.rod_generator import RodGenerator
 # ───────────────────────── Rope construction ─────────────────────────
 ROPE_START   = np.array([1.0, 2.0, 1.0], dtype=float)   # first sphere centre
 SEG_LEN      = 1.0                                      # spacing along +X
-NUM_SPHERES  = 10                                       # 10 spheres → length 9
+NUM_SPHERES  = 5                                       # 10 spheres → length 9
 SPHERE_RAD   = 0.2
 DYNAMIC_MASS = 1.0                                      # every sphere except anchor
 GHOST_DIST_RATIO = 0.5 
@@ -168,7 +168,7 @@ dt       = 1.0 / 60.0
 running  = True
 
 counter=0;
-total_frame = 10000000;
+total_frame = 500;
 while running:
     for e in pygame.event.get():
         if e.type == QUIT:
@@ -180,17 +180,17 @@ while running:
     # solver.step(dt)
     
     # 🎯 Recompute frames after the rod is updated
-    T, N, B = engine.rod_utils.RodUtils.frenet_frames(particles)
+    # T, N, B = engine.rod_utils.RodUtils.frenet_frames(particles)
 
     # 🎯 Rebuild debug lines
-    frame_lines = engine.rod_utils.RodUtils.frenet_frame_lines(particles, T, N, B)
+    # frame_lines = engine.rod_utils.RodUtils.frenet_frame_lines(particles, T, N, B)
 
     # camera input
     keys = pygame.key.get_pressed()
     renderer.camera.handle_input(keys, dt)
 
     # draw
-    renderer.render(elastic_rod.particles + elastic_rod.ghost_particles,rope_lines()+frame_lines)
+    renderer.render(elastic_rod.particles + elastic_rod.ghost_particles,rope_lines())
     clock.tick(60)
 
     counter+=1;
