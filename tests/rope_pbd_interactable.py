@@ -16,16 +16,29 @@ from engine.rod_generator import RodGenerator
 # ───────────────────────── Rope construction ─────────────────────────
 ROPE_START   = np.array([1.0, 2.0, 1.0], dtype=float)
 SEG_LEN      = 0.5 
-NUM_SPHERES  = 7
+NUM_SPHERES  = 6
 SPHERE_RAD   = 0.1
 DYNAMIC_MASS = 0.1
 GHOST_DIST_RATIO = 0.5 
-GHOST_MASS_RATIO = 0.25 
+GHOST_MASS_RATIO = 0.1
 
 particles = []
 for i in range(NUM_SPHERES):
     pos  = ROPE_START + np.array([i * SEG_LEN, 0.0, 0.0])
     particles.append(RigidBody(Transform(pos), mass=DYNAMIC_MASS, radius=SPHERE_RAD))
+
+# # NOTE:sprial generator.
+# spiral_positions = RodGenerator.generate_spiral(
+#     num_points=NUM_SPHERES,
+#     radius=2,
+#     pitch=1,
+#     turns=1.0,
+#     start=ROPE_START
+# )
+
+# particles = []
+# for pos in spiral_positions:
+#     particles.append(RigidBody(Transform(pos), mass=DYNAMIC_MASS, radius=SPHERE_RAD))
 
 
 T, N, B  = engine.rod_utils.RodUtils.frenet_frames(particles)
@@ -91,6 +104,9 @@ for i in range(NUM_SPHERES - 2):
     frame1 = engine.rod_utils.RodUtils.build_frame(p1, p2, g2)
     arclength = 0.5 * (e0.rest_len + e1.rest_len)
     restDarbouxVector = engine.rod_utils.RodUtils.darboux(frame0, frame1, arclength)
+
+    #Testing 
+    restDarbouxVector = np.array([-1, -2, -0.5])
     orientation_elements.append(OrientationElement(i, i + 1, restDarbouxVector))
 
 #Create rope container
@@ -126,8 +142,7 @@ def draw_text(surface, text, position, color=(255, 255, 0)):
 solver = PBDSolver(
     elastic_rod,
     gravity=np.array([0.0, -9.81, 0]),
-    substeps=1,
-    iters=20
+    iters=30
 )
 
 # Particle interaction / drag
@@ -210,7 +225,7 @@ while running:
     
     screen = pygame.display.get_surface()
     draw_text(screen, f"Timestep: {dt:.4f}", (10, 10))
-    draw_text(screen, f"Substeps: {solver.substeps}", (10, 30))
+    # draw_text(screen, f"Substeps: {solver.substeps}", (10, 30))
     draw_text(screen, f"Iterations: {solver.iters}", (10, 50))
     
     # pygame.display.flip()
