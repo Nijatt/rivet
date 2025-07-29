@@ -118,12 +118,16 @@ def rope_lines():
              for a, b in zip(particles[:-1], particles[1:]) ]
     return segs + axis_lines
 
+def draw_text(surface, text, position, color=(255, 255, 0)):
+    text_surface = font.render(text, True, color)
+    surface.blit(text_surface, position)
+
 # ───────────────────────── XPBD solver ───────────────────────────────
 solver = PBDSolver(
     elastic_rod,
     gravity=np.array([0.0, -9.81, 0]),
     substeps=1,
-    iters=5
+    iters=20
 )
 
 # Particle interaction / drag
@@ -133,6 +137,10 @@ drag_depth = 0.0  # Distance along the ray for dragging
 
 # ───────────────────────── Rendering loop ───────────────────────────
 pygame.init()
+
+pygame.font.init()
+font = pygame.font.SysFont("Arial", 18)
+
 pygame.display.set_caption("RIVET")
 renderer = OpenGLRenderer()
 clock    = pygame.time.Clock()
@@ -193,11 +201,20 @@ while running:
 
     if counter < total_frames:
         solver.step(dt)
-
+    
+    
     renderer.render(
         elastic_rod.particles + elastic_rod.ghost_particles,
         rope_lines()
     )
+    
+    screen = pygame.display.get_surface()
+    draw_text(screen, f"Timestep: {dt:.4f}", (10, 10))
+    draw_text(screen, f"Substeps: {solver.substeps}", (10, 30))
+    draw_text(screen, f"Iterations: {solver.iters}", (10, 50))
+    
+    # pygame.display.flip()
+
     clock.tick(60)
     counter += 1
 
