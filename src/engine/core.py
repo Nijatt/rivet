@@ -124,7 +124,7 @@ class PBDSolver:
 
                         darboux = RodUtils.darboux(frame0,frame1,arclenght);
 
-                        alpha  = np.array([0.2,0.2,0.1])
+                        alpha  = np.array([0.5,0.5,0.5])
 
                         constraint = RodUtils.bend_twist_constraint(darboux,rest_darboux,alpha);
                         
@@ -160,13 +160,14 @@ class PBDSolver:
                         dg1 = wg1 * dOmegaDg1 @ lambda_val
                         dg2 = wg2 * dOmegaDg2 @ lambda_val
 
-                       
 
-                        p0.pred_transform.position += dp0
-                        p1.pred_transform.position += dp1
-                        p2.pred_transform.position += dp2
-                        g1.pred_transform.position += dg1
-                        g2.pred_transform.position += dg2
+                        rot_stiffness = 0.7
+
+                        p0.pred_transform.position += rot_stiffness*dp0
+                        p1.pred_transform.position += rot_stiffness*dp1
+                        p2.pred_transform.position += rot_stiffness*dp2
+                        g1.pred_transform.position += rot_stiffness*dg1
+                        g2.pred_transform.position += rot_stiffness*dg2
 
 
 

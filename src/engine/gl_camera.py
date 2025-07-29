@@ -97,8 +97,8 @@ class Camera:
         """
         # ----- rotation first (num-pad) -----
         rot_step = _deg2rad(rot_speed_deg) * dt
-        if keys[pygame.K_KP4]: self.yaw   -= rot_step
-        if keys[pygame.K_KP6]: self.yaw   += rot_step
+        if keys[pygame.K_KP4]: self.yaw   += rot_step
+        if keys[pygame.K_KP6]: self.yaw   -= rot_step
         if keys[pygame.K_KP8]: self.pitch += rot_step
         if keys[pygame.K_KP2]: self.pitch -= rot_step
         self.pitch = np.clip(self.pitch, _deg2rad(-85), _deg2rad(85))
