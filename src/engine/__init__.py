@@ -6,7 +6,6 @@ __version__ = "0.1.0"
 # Expose the main API at package level
 from .body      import RigidBody
 from .body      import Particle
-from .core      import XPBDSolver
 from .core import PBDSolver
 from .collision import resolve_collision
 from .renderer  import Renderer
@@ -24,7 +23,6 @@ from .rod_generator import RodGenerator
 __all__ = [
     "RigidBody",
     "Particle",
-    "XPBDSolver",
     "PBDSolver",
     "resolve_collision",
     "Renderer",
