@@ -27,12 +27,15 @@ for i in range(NUM_PARTICLES):
     pos = ROPE_START + np.array([i * SEG_LEN, 0.0, 0.0], dtype=float)
     particles.append(RigidBody(Transform(pos), mass=DYNAMIC_MASS, radius=SPHERE_RAD))
 
-# Pin a couple of particles (like before)
-particles[0].inv_mass = 0.0; particles[0].mass = 0.0
+# Pin the first particle
+particles[0].inv_mass = 0.0
+particles[0].mass     = 0.0
 
-#make one particle heavy
-heavy_particle_mass_inv=0.01
-particles[NUM_PARTICLES - 1].inv_mass = heavy_particle_mass_inv; particles[0].mass = 1/heavy_particle_mass_inv;
+# Make one particle heavy (treat as instrument you can grab)
+HEAVY_INDEX = NUM_PARTICLES - 1
+heavy_particle_inv_mass = 0.01  # smaller inv_mass -> heavier
+particles[HEAVY_INDEX].inv_mass = heavy_particle_inv_mass
+particles[HEAVY_INDEX].mass     = (1.0 / heavy_particle_inv_mass) if heavy_particle_inv_mass > 0 else 0.0
 
 # Distance-constraint list: (i, j, rest_length)
 constraints = []
@@ -41,7 +44,6 @@ for i in range(NUM_PARTICLES - 1):
     p1 = particles[i + 1].transform.position
     rest = float(np.linalg.norm(p1 - p0))
     constraints.append((i, i + 1, rest))
-
 
 # Total rest length of the chain (sum of rest lengths)
 TOTAL_REST_LENGTH = sum(rest for (_, _, rest) in constraints)
@@ -196,6 +198,7 @@ while running:
     draw_text(screen, f"Iterations: {ITERS}", (10, 30))
     draw_text(screen, f"Rest length:    {TOTAL_REST_LENGTH:.3f}", (10, 50))
     draw_text(screen, f"Current length: {current_chain_length():.3f}", (10, 70))
+    draw_text(screen, f"Heavy idx {HEAVY_INDEX}  inv_m: {heavy_particle_inv_mass:.3f}  m: {1.0/heavy_particle_inv_mass:.1f}", (10, 90))
 
     clock.tick(60)
     counter += 1
