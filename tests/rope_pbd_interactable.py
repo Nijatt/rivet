@@ -142,7 +142,7 @@ def draw_text(surface, text, position, color=(255, 255, 0)):
 solver = PBDSolver(
     elastic_rod,
     gravity=np.array([0.0, -9.81, 0]),
-    iters=30
+    iters=5
 )
 
 # Particle interaction / drag
@@ -163,7 +163,7 @@ dt       = 1.0 / 60.0
 running  = True
 
 counter = 0
-total_frames = 500000
+total_frames = 50000
 
 while running:
     for e in pygame.event.get():
