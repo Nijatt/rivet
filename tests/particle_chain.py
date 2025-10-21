@@ -21,6 +21,9 @@ ITERS           = 8          # projection iterations per step
 GRAVITY         = np.array([0.0, -9.81, 0.0])
 DAMPING         = 0.98       # simple velocity damping
 
+# Heaviness control for the last particle in constraint projection
+MASS_MULTIPLIER = 5000.0     # use >> 1 and divide inv-mass → effectively heavier
+
 # Build particles in a straight line
 particles = []
 for i in range(NUM_PARTICLES):
@@ -88,9 +91,16 @@ def pbd_step(particles, constraints, dt, iters, gravity, damping):
         for (i, j, rest) in constraints:
             pi = particles[i]
             pj = particles[j]
-            wi = pi.inv_mass
-            wj = pj.inv_mass
-            if wi == 0.0 and wj == 0.0:
+
+            # effective inverse masses (local, don't overwrite particle inv_masses)
+            wi_eff = pi.inv_mass
+            wj_eff = pj.inv_mass
+
+            # make the LAST particle act heavier by REDUCING its inverse mass
+            if j == NUM_PARTICLES - 1:
+                wj_eff = wj_eff * MASS_MULTIPLIER  # ↓ smaller inv_mass → heavier
+
+            if wi_eff == 0.0 and wj_eff == 0.0:
                 continue
 
             xi = pi.transform.position
@@ -102,16 +112,16 @@ def pbd_step(particles, constraints, dt, iters, gravity, damping):
 
             n = delta / d
             C = d - rest
-            wsum = wi + wj
+            wsum = wi_eff + wj_eff
             if wsum <= 0.0:
                 continue
 
-            # classic PBD distance correction split by inverse-mass
+            # classic PBD distance correction split by effective inverse-mass
             corr = (C / wsum) * n
-            if wi > 0.0:
-                pi.transform.position = xi + corr * wi
-            if wj > 0.0:
-                pj.transform.position = xj - corr * wj
+            if wi_eff > 0.0:
+                pi.transform.position = xi + corr * wi_eff
+            if wj_eff > 0.0:
+                pj.transform.position = xj - corr * wj_eff
 
     # 4) update velocities (with damping)
     for p, x_prev in zip(particles, prev):
@@ -225,8 +235,11 @@ while running:
     # live HUD in window title (robust with OPENGL)
     cur_len = current_chain_length()
     stretch = cur_len - TOTAL_REST_LENGTH
+    eff_inv_last = particles[HEAVY_INDEX].inv_mass / MASS_MULTIPLIER  # the value used in projection
     pygame.display.set_caption(
-        f"RIVET — Distance Chain | dt {dt:.4f} | iters {ITERS} | rest {TOTAL_REST_LENGTH:.3f} | curr {cur_len:.3f} | Δ {stretch:+.3f} | heavy idx {HEAVY_INDEX} inv_m {heavy_particle_inv_mass:.3f}"
+        f"RIVET — Distance Chain | dt {dt:.4f} | iters {ITERS} | rest {TOTAL_REST_LENGTH:.3f} | "
+        f"curr {cur_len:.3f} | Δ {stretch:+.3f} | heavy idx {HEAVY_INDEX} inv_m {heavy_particle_inv_mass:.4f} | "
+        f"eff_inv_last {eff_inv_last:.6f} (mult {MASS_MULTIPLIER:g})"
     )
 
     clock.tick(60)
