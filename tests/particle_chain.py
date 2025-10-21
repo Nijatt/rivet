@@ -30,6 +30,10 @@ for i in range(NUM_PARTICLES):
 # Pin a couple of particles (like before)
 particles[0].inv_mass = 0.0; particles[0].mass = 0.0
 
+#make one particle heavy
+heavy_particle_mass_inv=0.01
+particles[NUM_PARTICLES - 1].inv_mass = heavy_particle_mass_inv; particles[0].mass = 1/heavy_particle_mass_inv;
+
 # Distance-constraint list: (i, j, rest_length)
 constraints = []
 for i in range(NUM_PARTICLES - 1):
@@ -37,6 +41,10 @@ for i in range(NUM_PARTICLES - 1):
     p1 = particles[i + 1].transform.position
     rest = float(np.linalg.norm(p1 - p0))
     constraints.append((i, i + 1, rest))
+
+
+# Total rest length of the chain (sum of rest lengths)
+TOTAL_REST_LENGTH = sum(rest for (_, _, rest) in constraints)
 
 # ───────────────────────── helpers / visuals ─────────────────────────
 AXIS_LEN = 100.0
@@ -58,6 +66,13 @@ def rope_lines():
 def draw_text(surface, text, position, color=(255, 255, 0)):
     text_surface = font.render(text, True, color)
     surface.blit(text_surface, position)
+
+def current_chain_length():
+    """Sum of current distances between consecutive particles."""
+    return sum(
+        float(np.linalg.norm(particles[i + 1].transform.position - particles[i].transform.position))
+        for i in range(NUM_PARTICLES - 1)
+    )
 
 # ───────────────────────── Minimal PBD step ──────────────────────────
 def pbd_step(particles, constraints, dt, iters, gravity, damping):
@@ -178,7 +193,9 @@ while running:
 
     screen = pygame.display.get_surface()
     draw_text(screen, f"Timestep: {dt:.4f}", (10, 10))
-    draw_text(screen, f"Iterations: {ITERS}", (10, 50))
+    draw_text(screen, f"Iterations: {ITERS}", (10, 30))
+    draw_text(screen, f"Rest length:    {TOTAL_REST_LENGTH:.3f}", (10, 50))
+    draw_text(screen, f"Current length: {current_chain_length():.3f}", (10, 70))
 
     clock.tick(60)
     counter += 1
