@@ -65,10 +65,6 @@ def rope_lines():
              for a, b in zip(particles[:-1], particles[1:]) ]
     return segs + axis_lines
 
-def draw_text(surface, text, position, color=(255, 255, 0)):
-    text_surface = font.render(text, True, color)
-    surface.blit(text_surface, position)
-
 def current_chain_length():
     """Sum of current distances between consecutive particles."""
     return sum(
@@ -130,10 +126,42 @@ drag_depth = 0.0  # Distance along the ray for dragging
 # ───────────────────────── Rendering loop ────────────────────────────
 pygame.init()
 pygame.font.init()
-font = pygame.font.SysFont("Arial", 18)
 
+# window title will carry live stats (works with OPENGL)
 pygame.display.set_caption("RIVET — Distance Chain")
+
 renderer = OpenGLRenderer()
+
+# try to brighten the scene background
+try:
+    # if renderer exposes an API
+    if hasattr(renderer, "set_clear_color"):
+        renderer.set_clear_color((0.22, 0.22, 0.24, 1.0))
+    else:
+        # fallback: set OpenGL clear color directly
+        from OpenGL import GL
+        GL.glClearColor(0.22, 0.22, 0.24, 1.0)
+except Exception:
+    pass
+
+# try to position camera reasonably to see the chain
+try:
+    center = ROPE_START + np.array([(NUM_PARTICLES - 1) * SEG_LEN * 0.5, 0.0, 0.0])
+    if hasattr(renderer.camera, "set_look_at"):
+        renderer.camera.set_look_at(
+            eye=center + np.array([0.0, 0.5, 3.0]),
+            target=center,
+            up=np.array([0.0, 1.0, 0.0])
+        )
+    else:
+        # best-effort direct attributes
+        if hasattr(renderer.camera, "position"):
+            renderer.camera.position = center + np.array([0.0, 0.5, 3.0])
+        if hasattr(renderer.camera, "target"):
+            renderer.camera.target = center
+except Exception:
+    pass
+
 clock    = pygame.time.Clock()
 dt       = 1.0 / 60.0
 running  = True
@@ -191,14 +219,15 @@ while running:
     if counter < total_frames:
         pbd_step(particles, constraints, dt, ITERS, GRAVITY, DAMPING)
 
+    # 3D render (renderer likely handles buffer swapping internally)
     renderer.render(particles, rope_lines())
 
-    screen = pygame.display.get_surface()
-    draw_text(screen, f"Timestep: {dt:.4f}", (10, 10))
-    draw_text(screen, f"Iterations: {ITERS}", (10, 30))
-    draw_text(screen, f"Rest length:    {TOTAL_REST_LENGTH:.3f}", (10, 50))
-    draw_text(screen, f"Current length: {current_chain_length():.3f}", (10, 70))
-    draw_text(screen, f"Heavy idx {HEAVY_INDEX}  inv_m: {heavy_particle_inv_mass:.3f}  m: {1.0/heavy_particle_inv_mass:.1f}", (10, 90))
+    # live HUD in window title (robust with OPENGL)
+    cur_len = current_chain_length()
+    stretch = cur_len - TOTAL_REST_LENGTH
+    pygame.display.set_caption(
+        f"RIVET — Distance Chain | dt {dt:.4f} | iters {ITERS} | rest {TOTAL_REST_LENGTH:.3f} | curr {cur_len:.3f} | Δ {stretch:+.3f} | heavy idx {HEAVY_INDEX} inv_m {heavy_particle_inv_mass:.3f}"
+    )
 
     clock.tick(60)
     counter += 1
