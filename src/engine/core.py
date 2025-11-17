@@ -182,17 +182,35 @@ class PBDSolver:
             b.transform.position = b.pred_transform.position
 
 class ShukurovVelocitySolver:
-    def __init__(self, particles, kv=0.2, ks=0.8, damping=0.05):
+    def __init__(
+        self,
+        particles,
+        kv=0.2,
+        ks=0.8,
+        damping=0.05,
+        gravity=np.array([0.0, -9.81, 0.0]),
+        ground_y=0.0,
+        restitution=0.2,
+        friction=0.9,
+    ):
         """
         particles: list[RigidBody]
         kv: velocity-following strength
         ks: spring/shape strength (0 = no soft shape)
         damping: simple velocity damping factor per step
+        gravity: constant acceleration vector
+        ground_y: height of ground plane (y = ground_y)
+        restitution: bounce factor for vertical velocity
+        friction: tangential damping on ground contact
         """
         self.particles = particles
         self.kv = kv
         self.ks = ks
         self.damping = damping
+        self.gravity = gravity
+        self.ground_y = ground_y
+        self.restitution = restitution
+        self.friction = friction
 
         # Cache initial rest distances between all pairs (soft "shape" memory)
         n = len(particles)
@@ -219,6 +237,12 @@ class ShukurovVelocitySolver:
             pos[i] = p.transform.position
             vel[i] = p.vel
             inv_mass[i] = p.inv_mass
+
+        # Apply gravity to velocities
+        for i in range(n):
+            if inv_mass[i] == 0.0:
+                continue
+            vel[i] += self.gravity * dt
 
         # Pairwise distances
         d = np.zeros((n, n), dtype=float)
@@ -263,11 +287,28 @@ class ShukurovVelocitySolver:
             dv = self.kv * vf + self.ks * fs
             new_vel[i] = v_i + dv * dt
 
-        # Damping and integration
+        # Global damping
         new_vel *= (1.0 - self.damping)
 
+        # Integrate and handle ground collision
         for i, p in enumerate(self.particles):
             if inv_mass[i] == 0.0:
                 continue
+
             p.vel = new_vel[i]
             p.transform.position = p.transform.position + new_vel[i] * dt
+
+            # ----- simple ground collision: plane y = ground_y -----
+            y = p.transform.position[1]
+            r = getattr(p, "radius", 0.0)
+
+            floor_level = self.ground_y + r
+            if y < floor_level:
+                # positional correction
+                p.transform.position[1] = floor_level
+
+                # velocity correction: bounce + friction
+                if p.vel[1] < 0.0:
+                    p.vel[1] = -p.vel[1] * self.restitution
+                    p.vel[0] *= self.friction
+                    p.vel[2] *= self.friction
