@@ -29,8 +29,8 @@ for pos in (p0, p1, p2, p3):
     particles.append(RigidBody(Transform(pos), mass=DYNAMIC_MASS, radius=SPHERE_RAD))
 
 # ───────────────────────── Per-drone thrust (random in range) ─────────────────
-THRUST_MIN = 8.0   # a
-THRUST_MAX = 10.0  # b
+THRUST_MIN = 16.0   # a
+THRUST_MAX = 20.0  # b
 
 # Each drone gets its own constant upward acceleration strength
 drone_thrust = np.random.uniform(THRUST_MIN, THRUST_MAX, size=len(particles))
@@ -73,7 +73,7 @@ solver = ShukurovVelocitySolver(
     kv=1.0,    # velocity-following strength
     ks=1.0,    # soft-shape spring strength
     damping=0.00,
-    gravity=np.array([0.0, -3.0, 0.0]),
+    gravity=np.array([0.0, -9.0, 0.0]),
 )
 
 
