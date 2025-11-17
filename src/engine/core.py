@@ -180,3 +180,94 @@ class PBDSolver:
         for b in self.elastic_rod.ghost_particles:
             b.vel = (b.pred_transform.position - b.transform.position) / h
             b.transform.position = b.pred_transform.position
+
+class ShukurovVelocitySolver:
+    def __init__(self, particles, kv=0.2, ks=0.8, damping=0.05):
+        """
+        particles: list[RigidBody]
+        kv: velocity-following strength
+        ks: spring/shape strength (0 = no soft shape)
+        damping: simple velocity damping factor per step
+        """
+        self.particles = particles
+        self.kv = kv
+        self.ks = ks
+        self.damping = damping
+
+        # Cache initial rest distances between all pairs (soft "shape" memory)
+        n = len(particles)
+        self.rest_lengths = np.zeros((n, n), dtype=float)
+        for i in range(n):
+            pi = particles[i].transform.position
+            for j in range(i + 1, n):
+                pj = particles[j].transform.position
+                L = np.linalg.norm(pi - pj)
+                self.rest_lengths[i, j] = L
+                self.rest_lengths[j, i] = L
+
+    def step(self, dt: float):
+        n = len(self.particles)
+        if n == 0:
+            return
+
+        # Read positions & velocities into arrays
+        pos = np.zeros((n, 3), dtype=float)
+        vel = np.zeros((n, 3), dtype=float)
+        inv_mass = np.zeros(n, dtype=float)
+
+        for i, p in enumerate(self.particles):
+            pos[i] = p.transform.position
+            vel[i] = p.vel
+            inv_mass[i] = p.inv_mass
+
+        # Pairwise distances
+        d = np.zeros((n, n), dtype=float)
+        for i in range(n):
+            for j in range(i + 1, n):
+                dij = np.linalg.norm(pos[i] - pos[j])
+                d[i, j] = dij
+                d[j, i] = dij
+
+        new_vel = vel.copy()
+
+        for i in range(n):
+            if inv_mass[i] == 0.0:
+                # Kinematic or fixed particle: skip dynamics
+                continue
+
+            v_i = vel[i]
+            x_i = pos[i]
+
+            vf = np.zeros(3, dtype=float)  # velocity-following term
+            fs = np.zeros(3, dtype=float)  # spring-like soft-shape term
+
+            for j in range(n):
+                if i == j:
+                    continue
+
+                dij = d[i, j]
+                if dij <= 1e-8:
+                    continue
+
+                # Distance-based weight: close strong, far weak
+                w = 1.0 / (1.0 + dij)
+
+                # Velocity-following
+                vf += w * (vel[j] - v_i)
+
+                # Soft rest-length shaping (optional; skip if ks == 0)
+                if self.ks != 0.0:
+                    Lij = self.rest_lengths[i, j]
+                    fs += - (dij - Lij) * (x_i - pos[j]) / dij
+
+            dv = self.kv * vf + self.ks * fs
+            new_vel[i] = v_i + dv * dt
+
+        # Damping and integration
+        new_vel *= (1.0 - self.damping)
+
+        for i, p in enumerate(self.particles):
+            if inv_mass[i] == 0.0:
+                continue
+            p.vel = new_vel[i]
+            p.transform.position = p.transform.position + new_vel[i] * dt
